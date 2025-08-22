@@ -13,6 +13,7 @@
     "prepare-base": "node prepare-base-build.js",
     "safe-build": "node safe-build.js",
     "lightweight-build": "node lightweight-build.js",
+    "vercel-build": "node vercel-build.js",
     "postinstall": "npm run prepare-base"
   },
   "keywords": [
