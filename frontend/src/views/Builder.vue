@@ -116,7 +116,24 @@
                       </div>
                       <div class="config-item" v-if="config.API_CONFIG.urlMode === 'static'">
                         <label>静态基础URL</label>
-                        <el-input v-model="config.API_CONFIG.staticBaseUrl[0]" placeholder="/api/v1" />
+                        <div class="url-list">
+                          <div v-for="(url, index) in config.API_CONFIG.staticBaseUrl" :key="index" class="url-item">
+                            <el-input v-model="config.API_CONFIG.staticBaseUrl[index]" placeholder="/api/v1" />
+                            <el-button 
+                              type="danger" 
+                              size="small" 
+                              @click="removeUrl(index)"
+                              :disabled="config.API_CONFIG.staticBaseUrl.length <= 1"
+                              class="remove-btn"
+                            >
+                              <el-icon><Delete /></el-icon>
+                            </el-button>
+                          </div>
+                          <el-button type="primary" size="small" @click="addUrl" class="add-btn">
+                            <el-icon><Plus /></el-icon>
+                            添加URL
+                          </el-button>
+                        </div>
                       </div>
                       <div class="config-item">
                         <label>启用中间件代理</label>
@@ -617,10 +634,16 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete, Plus, ArrowDown } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 export default {
   name: 'Builder',
+  components: {
+    Delete,
+    Plus,
+    ArrowDown
+  },
   setup() {
     const router = useRouter()
     const route = useRoute()
@@ -1031,6 +1054,18 @@ export default {
       fetchSystemConfig()
     })
 
+    // 添加URL方法
+    const addUrl = () => {
+      config.API_CONFIG.staticBaseUrl.push('/api/v1')
+    }
+
+    // 删除URL方法
+    const removeUrl = (index) => {
+      if (config.API_CONFIG.staticBaseUrl.length > 1) {
+        config.API_CONFIG.staticBaseUrl.splice(index, 1)
+      }
+    }
+
     return {
       activeIndex,
       activeTab,
@@ -1043,7 +1078,9 @@ export default {
       handleSelect,
       handleCommand,
       resetConfig,
-      handleBuild
+      handleBuild,
+      addUrl,
+      removeUrl
     }
   }
 }
@@ -1180,6 +1217,31 @@ export default {
    font-size: 1.1rem;
    border-bottom: 2px solid #dee2e6;
    padding-bottom: 0.5rem;
+ }
+
+ .url-list {
+   display: flex;
+   flex-direction: column;
+   gap: 0.5rem;
+ }
+
+ .url-item {
+   display: flex;
+   align-items: center;
+   gap: 0.5rem;
+ }
+
+ .url-item .el-input {
+   flex: 1;
+ }
+
+ .remove-btn {
+   flex-shrink: 0;
+ }
+
+ .add-btn {
+   align-self: flex-start;
+   margin-top: 0.5rem;
  }
 
 @media (max-width: 768px) {
