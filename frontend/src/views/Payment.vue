@@ -89,6 +89,7 @@
                               <component :is="method.icon" />
                             </el-icon>
                             <span>{{ method.label }}</span>
+                            <span v-if="method.value === 'usdt'" class="usdt-note">(TRC20)</span>
                           </div>
                         </div>
                       </div>
@@ -221,7 +222,8 @@
                     <ul>
                       <li>充值金额与获得积分比例为 1:1</li>
                       <li>每次构建主题需要消耗 {{ systemConfig.price_per_build || 10 }} 积分</li>
-                      <li>支持支付宝、微信、PayPal等多种支付方式</li>
+                      <li>支持支付宝、微信、PayPal、USDT等多种支付方式</li>
+                      <li>USDT支付使用TRC20网络，当前汇率: 1 USDT = ¥{{ usdtRate }}</li>
                       <li>充值成功后积分立即到账</li>
                       <li>如有问题请联系客服</li>
                     </ul>
@@ -248,14 +250,32 @@
     </el-container>
 
     <!-- 支付弹窗 -->
-    <el-dialog v-model="paymentDialogVisible" title="支付订单" width="400px" center>
+    <el-dialog v-model="paymentDialogVisible" title="支付订单" width="500px" center>
       <div class="payment-modal">
         <div class="order-info">
           <h4>订单 #{{ currentOrder?.order_id }}</h4>
           <p class="amount">¥{{ currentOrder?.amount }}</p>
+          <p class="payment-method">支付方式: {{ getPaymentMethodText(currentOrder?.payment_method) }}</p>
         </div>
         
-        <div class="qr-code" v-if="currentOrder?.qr_code">
+        <!-- USDT支付方式 -->
+        <div v-if="currentOrder?.payment_method === 'usdt'" class="usdt-payment">
+          <h4>USDT支付 (TRC20)</h4>
+          <div class="usdt-info">
+            <p><strong>支付金额:</strong> {{ currentOrder?.usdt_amount || '计算中...' }} USDT</p>
+            <p><strong>收款地址:</strong></p>
+            <div class="usdt-address">
+              <code>{{ currentOrder?.usdt_address || '加载中...' }}</code>
+              <el-button size="small" @click="copyUsdtAddress" type="primary">
+                复制地址
+              </el-button>
+            </div>
+            <p class="usdt-tip">请使用TRC20网络转账，转账完成后系统将自动确认</p>
+          </div>
+        </div>
+        
+        <!-- 其他支付方式 -->
+        <div v-else class="qr-code" v-if="currentOrder?.qr_code">
           <img :src="currentOrder.qr_code" alt="支付二维码" />
           <p>请使用{{ getPaymentMethodText(currentOrder.payment_method) }}扫码支付</p>
         </div>
@@ -296,6 +316,7 @@ export default {
     const checking = ref(null)
     const systemConfig = ref({})
     const orders = ref([])
+    const usdtRate = ref(7.2)
     const orderPagination = ref({
       page: 1,
       limit: 10,
@@ -317,7 +338,8 @@ export default {
     const paymentMethods = [
       { label: '支付宝', value: 'alipay', icon: 'Money' },
       { label: '微信支付', value: 'wechat', icon: 'ChatDotRound' },
-      { label: 'PayPal', value: 'paypal', icon: 'CreditCard' }
+      { label: 'PayPal', value: 'paypal', icon: 'CreditCard' },
+      { label: 'USDT', value: 'usdt', icon: 'Coin' }
     ]
 
     const minimumAmount = 1
@@ -464,9 +486,25 @@ export default {
       const methodMap = {
         alipay: '支付宝',
         wechat: '微信支付',
-        paypal: 'PayPal'
+        paypal: 'PayPal',
+        usdt: 'USDT'
       }
       return methodMap[method] || method
+    }
+
+    const copyUsdtAddress = async () => {
+      try {
+        const address = currentOrder.value?.usdt_address
+        if (address) {
+          await navigator.clipboard.writeText(address)
+          ElMessage.success('USDT地址已复制到剪贴板')
+        } else {
+          ElMessage.error('USDT地址未加载')
+        }
+      } catch (error) {
+        ElMessage.error('复制失败')
+        console.error('复制USDT地址失败:', error)
+      }
     }
 
     const formatDate = (date) => {
@@ -492,8 +530,18 @@ export default {
       }
     }
 
+    const loadUsdtRate = async () => {
+      try {
+        const response = await axios.get('/api/usdt/rate')
+        usdtRate.value = response.data.rate
+      } catch (error) {
+        console.error('加载USDT汇率失败:', error)
+      }
+    }
+
     onMounted(() => {
       fetchSystemConfig()
+      loadUsdtRate()
       loadOrders()
     })
 
@@ -520,6 +568,7 @@ export default {
       minimumAmount,
       finalAmount,
       canRecharge,
+      usdtRate,
       handleSelect,
       handleCommand,
       handleCustomAmount,
@@ -532,7 +581,8 @@ export default {
       getOrderStatusText,
       getPaymentMethodText,
       formatDate,
-      copyApiKey
+      copyApiKey,
+      copyUsdtAddress
     }
   }
 }
@@ -882,6 +932,59 @@ export default {
   gap: 1rem;
   justify-content: center;
   margin-top: 2rem;
+}
+
+.usdt-note {
+  font-size: 0.75rem;
+  color: #666;
+  margin-left: 0.5rem;
+}
+
+.usdt-payment {
+  margin: 2rem 0;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.usdt-payment h4 {
+  margin-bottom: 1rem;
+  color: #333;
+  text-align: center;
+}
+
+.usdt-info p {
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.usdt-address {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.usdt-address code {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.875rem;
+  word-break: break-all;
+  color: #333;
+}
+
+.usdt-tip {
+  font-size: 0.875rem;
+  color: #666;
+  background: #e6f7ff;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
 }
 
 .pagination {

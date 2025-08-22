@@ -15,6 +15,7 @@ const sqlite3 = require('sqlite3').verbose();
 const moment = require('moment');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
+const usdtConfig = require('./usdt-config');
 require('dotenv').config();
 
 const app = express();
@@ -244,7 +245,45 @@ app.post('/api/orders/create', authenticateToken, [
   const { amount, payment_method = 'alipay' } = req.body;
   const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // 生成支付二维码
+  // USDT支付处理
+  if (payment_method === 'usdt') {
+    // 检查USDT支付是否启用
+    if (!usdtConfig.ENABLE_USDT_PAYMENT) {
+      return res.status(400).json({ error: 'USDT支付功能已禁用' });
+    }
+    
+    // 检查金额限制
+    const usdtAmount = (amount / usdtConfig.USDT_RATE).toFixed(2);
+    if (usdtAmount < usdtConfig.MIN_USDT_AMOUNT) {
+      return res.status(400).json({ error: `最小充值金额为 ${usdtConfig.MIN_USDT_AMOUNT} USDT` });
+    }
+    if (usdtAmount > usdtConfig.MAX_USDT_AMOUNT) {
+      return res.status(400).json({ error: `最大充值金额为 ${usdtConfig.MAX_USDT_AMOUNT} USDT` });
+    }
+    
+    // USDT收款地址
+    const usdtAddress = usdtConfig.USDT_ADDRESS;
+    
+    db.run('INSERT INTO orders (user_id, order_id, amount, payment_method, payment_url) VALUES (?, ?, ?, ?, ?)',
+      [req.user.id, orderId, amount, payment_method, usdtAddress],
+      function(err) {
+        if (err) {
+          return res.status(500).json({ error: '创建订单失败' });
+        }
+
+        res.json({
+          order_id: orderId,
+          amount,
+          payment_method: 'usdt',
+          usdt_amount: usdtAmount,
+          usdt_address: usdtAddress,
+          status: 'pending'
+        });
+      });
+    return;
+  }
+
+  // 其他支付方式处理
   const paymentUrl = `https://example.com/pay/${orderId}`;
   let qrCodeDataUrl;
   try {
@@ -270,6 +309,17 @@ app.post('/api/orders/create', authenticateToken, [
     });
 });
 
+// 获取USDT汇率
+app.get('/api/usdt/rate', (req, res) => {
+  res.json({
+    rate: usdtConfig.USDT_RATE,
+    network: usdtConfig.USDT_NETWORK,
+    enabled: usdtConfig.ENABLE_USDT_PAYMENT,
+    min_amount: usdtConfig.MIN_USDT_AMOUNT,
+    max_amount: usdtConfig.MAX_USDT_AMOUNT
+  });
+});
+
 // 检查订单状态
 app.get('/api/orders/:orderId/status', authenticateToken, (req, res) => {
   const { orderId } = req.params;
@@ -279,12 +329,29 @@ app.get('/api/orders/:orderId/status', authenticateToken, (req, res) => {
       return res.status(404).json({ error: '订单不存在' });
     }
 
-    res.json({
-      order_id: order.order_id,
-      amount: order.amount,
-      status: order.status,
-      created_at: order.created_at
-    });
+    // USDT支付特殊处理
+    if (order.payment_method === 'usdt') {
+      const usdtAmount = (order.amount / usdtConfig.USDT_RATE).toFixed(2);
+      const usdtAddress = order.payment_url; // 存储的是USDT地址
+
+      res.json({
+        order_id: order.order_id,
+        amount: order.amount,
+        payment_method: order.payment_method,
+        usdt_amount: usdtAmount,
+        usdt_address: usdtAddress,
+        status: order.status,
+        created_at: order.created_at
+      });
+    } else {
+      res.json({
+        order_id: order.order_id,
+        amount: order.amount,
+        payment_method: order.payment_method,
+        status: order.status,
+        created_at: order.created_at
+      });
+    }
   });
 });
 
