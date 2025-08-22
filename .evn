@@ -1,0 +1,14 @@
+```bash
+# 服务器配置
+PORT=3000
+JWT_SECRET=your-secret-key
+NODE_ENV=development
+
+# EZ-Theme GitHub仓库配置
+EZ_THEME_REPO=https://github.com/wxfyes/EZ-Theme.git
+EZ_THEME_BRANCH=main
+
+# 其他配置
+PRICE_PER_BUILD=10
+MAX_BUILDS_PER_DAY=5
+```

@@ -137,8 +137,15 @@
                               {{ formatDate(scope.row.created_at) }}
                             </template>
                           </el-table-column>
-                          <el-table-column label="操作" width="200">
+                          <el-table-column label="操作" width="280">
                             <template #default="scope">
+                              <el-button 
+                                size="small" 
+                                type="primary"
+                                @click="addCredits(scope.row)"
+                              >
+                                充值
+                              </el-button>
                               <el-button 
                                 size="small" 
                                 @click="editUser(scope.row)"
@@ -169,6 +176,45 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- 充值对话框 -->
+                    <el-dialog
+                      v-model="creditsDialogVisible"
+                      title="用户充值"
+                      width="400px"
+                      :close-on-click-modal="false"
+                    >
+                      <el-form
+                        ref="creditsFormRef"
+                        :model="creditsForm"
+                        :rules="creditsRules"
+                        label-width="100px"
+                      >
+                        <el-form-item label="用户名">
+                          <el-input v-model="creditsForm.username" disabled />
+                        </el-form-item>
+                        <el-form-item label="当前余额">
+                          <el-input v-model="creditsForm.currentCredits" disabled />
+                        </el-form-item>
+                        <el-form-item label="充值金额" prop="credits">
+                          <el-input-number
+                            v-model="creditsForm.credits"
+                            :min="1"
+                            :max="999999"
+                            placeholder="请输入充值金额"
+                            style="width: 100%"
+                          />
+                        </el-form-item>
+                      </el-form>
+                      <template #footer>
+                        <span class="dialog-footer">
+                          <el-button @click="creditsDialogVisible = false">取消</el-button>
+                          <el-button type="primary" @click="confirmAddCredits" :loading="addingCredits">
+                            确认充值
+                          </el-button>
+                        </span>
+                      </template>
+                    </el-dialog>
                   </el-tab-pane>
 
                   <el-tab-pane label="构建统计" name="stats">
@@ -366,6 +412,8 @@ export default {
     const loadingStats = ref(false)
     const userSearch = ref('')
     const userDialogVisible = ref(false)
+    const creditsDialogVisible = ref(false)
+    const addingCredits = ref(false)
     const users = ref([])
     const userPagination = ref({
       page: 1,
@@ -401,6 +449,20 @@ export default {
       credits: 0,
       is_admin: false
     })
+
+    const creditsForm = ref({
+      user_id: null,
+      username: '',
+      currentCredits: 0,
+      credits: 1
+    })
+
+    const creditsRules = {
+      credits: [
+        { required: true, message: '请输入充值金额', trigger: 'blur' },
+        { type: 'number', min: 1, message: '充值金额必须大于0', trigger: 'blur' }
+      ]
+    }
 
     const handleSelect = (key) => {
       router.push(key)
@@ -522,6 +584,35 @@ export default {
       }
     }
 
+    const addCredits = (user) => {
+      creditsForm.value = {
+        user_id: user.id,
+        username: user.username,
+        currentCredits: user.credits,
+        credits: 1000
+      }
+      creditsDialogVisible.value = true
+    }
+
+    const confirmAddCredits = async () => {
+      try {
+        addingCredits.value = true
+        await axios.post('/api/admin/add-credits', {
+          user_id: creditsForm.value.user_id,
+          credits: creditsForm.value.credits
+        })
+        
+        ElMessage.success(`成功给用户 ${creditsForm.value.username} 充值了 ${creditsForm.value.credits} 积分`)
+        creditsDialogVisible.value = false
+        loadUsers() // 重新加载用户列表
+      } catch (error) {
+        ElMessage.error('充值失败')
+        console.error('充值失败:', error)
+      } finally {
+        addingCredits.value = false
+      }
+    }
+
     const loadStats = async () => {
       loadingStats.value = true
       try {
@@ -576,6 +667,8 @@ export default {
       loadingStats,
       userSearch,
       userDialogVisible,
+      creditsDialogVisible,
+      addingCredits,
       users,
       userPagination,
       userCurrentPage,
@@ -588,6 +681,8 @@ export default {
       isAdmin,
       configForm,
       userForm,
+      creditsForm,
+      creditsRules,
       handleSelect,
       handleCommand,
       formatDate,
@@ -598,7 +693,9 @@ export default {
       handleUserCurrentChange,
       editUser,
       saveUser,
-      deleteUser
+      deleteUser,
+      addCredits,
+      confirmAddCredits
     }
   }
 }

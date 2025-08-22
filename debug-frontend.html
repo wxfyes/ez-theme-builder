@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>前端构建调试</title>
+</head>
+<body>
+    <h1>前端构建文件调试</h1>
+    
+    <h2>1. 加载前端HTML</h2>
+    <div id="html-content"></div>
+    
+    <h2>2. 加载并执行JavaScript</h2>
+    <div id="js-result"></div>
+    
+    <h2>3. 检查Vue应用挂载</h2>
+    <div id="vue-result"></div>
+    
+    <script>
+        // 1. 加载HTML
+        fetch('/')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('html-content').innerHTML = 
+                    '<pre style="max-height: 300px; overflow: auto; border: 1px solid #ccc; padding: 10px;">' + html + '</pre>';
+            })
+            .catch(error => {
+                document.getElementById('html-content').innerHTML = 
+                    '<p style="color: red;">HTML加载失败: ' + error.message + '</p>';
+            });
+        
+        // 2. 加载JavaScript
+        fetch('/assets/index-34f661b1.js')
+            .then(response => response.text())
+            .then(js => {
+                document.getElementById('js-result').innerHTML = 
+                    '<p style="color: green;">JavaScript文件加载成功，大小: ' + js.length + ' 字符</p>';
+                
+                // 尝试执行JavaScript
+                try {
+                    // 创建一个新的script标签来执行
+                    const script = document.createElement('script');
+                    script.textContent = js;
+                    document.head.appendChild(script);
+                    
+                    document.getElementById('js-result').innerHTML += 
+                        '<p style="color: green;">JavaScript执行成功</p>';
+                    
+                    // 检查是否有Vue应用
+                    setTimeout(() => {
+                        const appElement = document.getElementById('app');
+                        if (appElement) {
+                            document.getElementById('vue-result').innerHTML = 
+                                '<p style="color: green;">找到app元素: ' + appElement.innerHTML + '</p>';
+                        } else {
+                            document.getElementById('vue-result').innerHTML = 
+                                '<p style="color: red;">未找到app元素</p>';
+                        }
+                    }, 1000);
+                    
+                } catch (e) {
+                    document.getElementById('js-result').innerHTML += 
+                        '<p style="color: red;">JavaScript执行错误: ' + e.message + '</p>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('js-result').innerHTML = 
+                    '<p style="color: red;">JavaScript加载失败: ' + error.message + '</p>';
+            });
+    </script>
+</body>
+</html>

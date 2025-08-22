@@ -1,3 +1,4 @@
+const { exec } = require('child_process');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -19,8 +20,14 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 中间件
-app.use(helmet());
+// 中间件 - 完全禁用CSP
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  originAgentCluster: false,
+  contentSecurityPolicy: false
+}));
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -416,6 +423,64 @@ app.get('/api/builds', authenticateToken, (req, res) => {
   });
 });
 
+// 重试构建
+app.post('/api/builds/:buildId/retry', authenticateToken, async (req, res) => {
+  const { buildId } = req.params;
+  console.log(`收到重试构建请求: ${buildId}, 用户ID: ${req.user.id}`);
+
+  // 检查构建是否存在且属于当前用户
+  db.get('SELECT * FROM builds WHERE build_id = ? AND user_id = ?', [buildId, req.user.id], async (err, build) => {
+    if (err || !build) {
+      return res.status(404).json({ error: '构建不存在' });
+    }
+
+    if (build.status === 'processing') {
+      return res.status(400).json({ error: '构建正在进行中' });
+    }
+
+    // 检查用户余额
+    db.get('SELECT credits FROM users WHERE id = ?', [req.user.id], (err, user) => {
+      if (err || !user) {
+        return res.status(404).json({ error: '用户不存在' });
+      }
+
+      db.get('SELECT value FROM system_config WHERE key = ?', ['price_per_build'], (err, config) => {
+        const pricePerBuild = parseInt(config?.value || 10);
+        
+        if (user.credits < pricePerBuild) {
+          return res.status(402).json({ error: '余额不足，请先充值' });
+        }
+
+        // 扣除余额
+        db.run('UPDATE users SET credits = credits - ? WHERE id = ?', [pricePerBuild, req.user.id], (err) => {
+          if (err) {
+            return res.status(500).json({ error: '扣除余额失败' });
+          }
+
+          // 重置构建状态
+          db.run('UPDATE builds SET status = ? WHERE build_id = ?', ['pending', buildId], (err) => {
+            if (err) {
+              return res.status(500).json({ error: '重置构建状态失败' });
+            }
+
+            // 重新开始构建
+            console.log('准备重新开始构建，配置数据长度:', build.config_data.length);
+            const configData = JSON.parse(build.config_data);
+            console.log('解析配置数据成功，开始调用processBuild');
+            processBuild(buildId, configData);
+
+            res.json({ 
+              message: '重试构建已开始',
+              build_id: buildId,
+              status: 'pending'
+            });
+          });
+        });
+      });
+    });
+  });
+});
+
 // 下载构建文件
 app.get('/api/builds/:buildId/download', authenticateToken, (req, res) => {
   const { buildId } = req.params;
@@ -477,47 +542,205 @@ app.post('/api/admin/config', authenticateToken, (req, res) => {
 // 异步处理构建
 async function processBuild(buildId, configData) {
   try {
+    console.log('==========================================');
+    console.log(`🚀 开始处理构建: ${buildId}`);
+    console.log('==========================================');
+    
     // 更新构建状态为处理中
     db.run('UPDATE builds SET status = ? WHERE build_id = ?', ['processing', buildId]);
+    console.log('构建状态已更新为处理中');
 
     // 创建构建目录
     const buildDir = path.join(__dirname, 'temp', buildId);
     const outputDir = path.join(__dirname, 'builds');
+    const baseBuildDir = path.join(__dirname, 'base-build');
+    
     await fs.ensureDir(buildDir);
     await fs.ensureDir(outputDir);
+    console.log('构建目录已创建');
 
-    // 复制EZ-Theme项目文件
-    const ezThemePath = 'E:\\GitHub\\EZ-Theme';
-    await fs.copy(ezThemePath, buildDir);
+    // 检查基础构建是否存在
+    const baseBuildExists = await fs.pathExists(baseBuildDir);
+    if (!baseBuildExists) {
+      console.log('基础构建不存在，正在准备...');
+      const { prepareBaseBuild } = require('./prepare-base-build');
+      await prepareBaseBuild();
+    }
 
-    // 更新配置文件
-    const configPath = path.join(buildDir, 'src', 'config', 'index.js');
-    let configContent = await fs.readFile(configPath, 'utf8');
-    
-    // 替换配置
-    Object.keys(configData).forEach(key => {
-      const value = typeof configData[key] === 'object' ? JSON.stringify(configData[key]) : configData[key];
-      configContent = configContent.replace(
-        new RegExp(`${key}:\\s*['"][^'"]*['"]`, 'g'),
-        `${key}: '${value}'`
-      );
-    });
+    // 复制预构建的基础项目
+    console.log('复制预构建的基础项目...');
+    await fs.copy(baseBuildDir, buildDir);
+    console.log('基础项目复制完成');
 
-    await fs.writeFile(configPath, configContent);
-
-    // 构建项目
-    const { exec } = require('child_process');
-    await new Promise((resolve, reject) => {
-      exec('npm run build', { cwd: buildDir }, (error, stdout, stderr) => {
-        if (error) {
-          console.error('构建错误:', error);
-          reject(error);
-          return;
+    console.log('=== 开始生成配置文件 ===');
+    try {
+      // 读取配置文件模板
+      const templatePath = path.join(__dirname, 'config-template.js');
+      let templateContent = await fs.readFile(templatePath, 'utf8');
+      console.log('配置文件模板读取成功');
+      
+      // 替换模板中的占位符
+      const replaceTemplateValue = (obj, path = '') => {
+        for (const key in obj) {
+          const currentPath = path ? `${path}.${key}` : key;
+          const value = obj[key];
+          
+          if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            replaceTemplateValue(value, currentPath);
+          } else {
+            const placeholder = `{{${currentPath}}}`;
+            let replacement;
+            if (typeof value === 'string') {
+              // 对于字符串值，总是添加引号
+              replacement = `'${value}'`;
+            } else {
+              replacement = JSON.stringify(value);
+            }
+            
+            // 先尝试替换带引号的占位符
+            const placeholderWithQuotes = `'${placeholder}'`;
+            let newContent = templateContent.replace(new RegExp(placeholderWithQuotes.replace(/\./g, '\\.'), 'g'), replacement);
+            
+            // 如果没有找到带引号的，再尝试替换不带引号的
+            if (newContent === templateContent) {
+              newContent = templateContent.replace(new RegExp(placeholder.replace(/\./g, '\\.'), 'g'), replacement);
+            }
+            if (newContent !== templateContent) {
+              console.log(`替换占位符: ${placeholder} -> ${replacement}`);
+              templateContent = newContent;
+            } else {
+              console.log(`未找到占位符: ${placeholder}`);
+            }
+          }
         }
-        resolve(stdout);
-      });
-    });
+      };
+      
+      console.log('开始替换模板占位符...');
+      replaceTemplateValue(configData);
+      console.log('模板占位符替换完成');
+      
+      // 删除原始配置文件并写入新的配置文件
+      const configPath = path.join(buildDir, 'src', 'config', 'index.js');
+      console.log('配置文件路径:', configPath);
+      
+      // 先检查原始文件是否存在
+      const originalExists = await fs.pathExists(configPath);
+      if (originalExists) {
+        console.log('原始配置文件存在，准备删除...');
+        const originalContent = await fs.readFile(configPath, 'utf8');
+        console.log('原始文件内容长度:', originalContent.length);
+        console.log('原始文件前100字符:', originalContent.substring(0, 100));
+        
+        // 删除原始文件
+        await fs.remove(configPath);
+        console.log('原始配置文件已删除');
+      }
+      
+      // 写入新的配置文件
+      console.log('写入新配置文件，内容长度:', templateContent.length);
+      await fs.writeFile(configPath, templateContent);
+      console.log('新配置文件写入完成');
+      
+      // 验证文件是否被正确写入
+      const writtenContent = await fs.readFile(configPath, 'utf8');
+      console.log('验证: 写入的文件内容长度:', writtenContent.length);
+      console.log('验证: 文件内容前100字符:', writtenContent.substring(0, 100));
+      
+      // 检查是否还有原始内容残留
+      if (writtenContent.includes('天阙') || writtenContent.includes('Xiao-V2board')) {
+        console.log('警告: 检测到原始配置文件内容残留！');
+      } else {
+        console.log('配置文件替换成功，无原始内容残留');
+      }
+      console.log('=== 配置文件生成完成 ===');
+    } catch (configError) {
+      console.error('配置文件生成失败:', configError);
+      // 不抛出错误，继续构建过程
+      console.log('配置文件生成失败，但继续构建过程');
+    }
 
+    // 在打包之前验证配置文件
+    console.log('=== 打包前配置文件验证 ===');
+    try {
+      const configPath = path.join(buildDir, 'src', 'config', 'index.js');
+      const finalConfigContent = await fs.readFile(configPath, 'utf8');
+      
+      console.log('最终配置文件内容长度:', finalConfigContent.length);
+      console.log('配置文件前200字符:', finalConfigContent.substring(0, 200));
+      
+      // 检查关键配置是否被正确替换
+      const configChecks = [
+        { name: 'PANEL_TYPE', check: (content) => content.includes(configData.PANEL_TYPE || '') },
+        { name: 'SITE_CONFIG.siteName', check: (content) => content.includes(configData.SITE_CONFIG?.siteName || '') },
+        { name: 'SITE_CONFIG.siteDescription', check: (content) => content.includes(configData.SITE_CONFIG?.siteDescription || '') },
+        { name: 'API_CONFIG.baseURL', check: (content) => content.includes(configData.API_CONFIG?.baseURL || '') }
+      ];
+      
+      let allChecksPassed = true;
+      for (const check of configChecks) {
+        const passed = check.check(finalConfigContent);
+        console.log(`配置检查 ${check.name}: ${passed ? '✓ 通过' : '✗ 失败'}`);
+        if (!passed) allChecksPassed = false;
+      }
+      
+      if (allChecksPassed) {
+        console.log('✓ 所有配置文件检查通过，可以开始打包');
+      } else {
+        console.log('✗ 配置文件检查失败，但继续打包过程');
+      }
+      
+    } catch (verifyError) {
+      console.error('配置文件验证失败:', verifyError);
+      console.log('继续打包过程');
+    }
+
+    console.log('=== 替换外部配置文件 ===');
+    
+    // 替换src/config/index.js文件
+    const configJsFile = path.join(buildDir, 'src', 'config', 'index.js');
+    console.log('配置文件路径:', configJsFile);
+    
+    if (await fs.pathExists(configJsFile)) {
+      console.log('生成新的配置文件...');
+      
+      // 生成新的配置文件内容
+      const newConfigContent = `/**
+ * 外部配置文件
+ * 由EZ-Theme构建器自动生成
+ * index.html 中可以搜索 EZ 将其替换为您的网站名称
+ * logo 摆放位置为 images/logo.png
+ */
+
+export const config = ${JSON.stringify(configData, null, 4)};
+
+window.EZ_CONFIG = config;`;
+      
+      await fs.writeFile(configJsFile, newConfigContent);
+      console.log('外部配置文件替换完成');
+      
+      // 重新构建项目以包含新的配置文件
+      console.log('=== 重新构建项目 ===');
+      await new Promise((resolve, reject) => {
+        exec('npm run build', { 
+          cwd: buildDir,
+          env: { ...process.env, VUE_APP_CONFIGJS: 'false' }
+        }, (error, stdout, stderr) => {
+          if (error) {
+            console.error('重新构建错误:', error);
+            console.error('重新构建错误输出:', stderr);
+            reject(error);
+            return;
+          }
+          console.log('项目重新构建完成');
+          console.log('重新构建输出:', stdout);
+          resolve(stdout);
+        });
+      });
+    } else {
+      console.log('未找到配置文件:', configJsFile);
+    }
+
+    console.log('开始创建ZIP文件');
     // 创建ZIP文件
     const output = fs.createWriteStream(path.join(outputDir, `${buildId}.zip`));
     const archive = archiver('zip', { zlib: { level: 9 } });
@@ -527,35 +750,79 @@ async function processBuild(buildId, configData) {
     });
 
     archive.on('error', (err) => {
+      console.error('ZIP创建错误:', err);
       throw err;
     });
 
     archive.pipe(output);
     archive.directory(path.join(buildDir, 'dist'), false);
     await archive.finalize();
+    console.log('ZIP文件打包完成');
 
+    console.log('更新构建状态为完成');
     // 更新构建状态为完成
     const downloadUrl = `/api/builds/${buildId}/download`;
     db.run('UPDATE builds SET status = ?, download_url = ? WHERE build_id = ?', 
       ['completed', downloadUrl, buildId]);
 
+    console.log('清理临时文件');
     // 清理临时文件
     await fs.remove(buildDir);
+    console.log('构建完成！');
 
   } catch (error) {
     console.error('构建失败:', error);
+    console.error('错误详情:', error.message);
     db.run('UPDATE builds SET status = ? WHERE build_id = ?', ['failed', buildId]);
+    console.log('构建状态已更新为失败');
   }
+
 }
 
-// 静态文件服务
-app.use(express.static(path.join(__dirname, 'public')));
+// 静态文件服务 - 前端构建文件
+app.use('/', express.static(path.join(__dirname, 'frontend', 'dist'), {
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+    res.setHeader('Cross-Origin-Opener-Policy', 'unsafe-none');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    // 强制使用HTTP
+    res.setHeader('Strict-Transport-Security', 'max-age=0');
+  }
+}));
+
+// 测试路由
+app.get('/test', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test.html'));
+});
+
+// 调试路由
+app.get('/debug', (req, res) => {
+  res.sendFile(path.join(__dirname, 'debug.html'));
+});
+
+// Vue测试路由
+app.get('/vue-test', (req, res) => {
+  res.sendFile(path.join(__dirname, 'simple-test.html'));
+});
+
+// 前端构建调试路由
+app.get('/debug-frontend', (req, res) => {
+  res.sendFile(path.join(__dirname, 'debug-frontend.html'));
+});
+
+// 所有其他路由都返回前端页面（SPA支持）
+app.get('*', (req, res) => {
+  // 设置正确的Content-Type
+  res.setHeader('Content-Type', 'text/html');
+  res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
+});
 
 // 启动服务器
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`服务器运行在端口 ${PORT}`);
   console.log(`管理后台: http://localhost:${PORT}/admin`);
   console.log(`用户界面: http://localhost:${PORT}`);
 });
 
 module.exports = app;
+

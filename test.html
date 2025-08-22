@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试页面</title>
+</head>
+<body>
+    <h1>服务器正常工作！</h1>
+    <p>如果你能看到这个页面，说明服务器配置正确。</p>
+    <p>现在让我们检查前端应用的问题。</p>
+    
+    <h2>测试静态文件访问：</h2>
+    <ul>
+        <li><a href="/assets/index-34f661b1.js">JavaScript文件</a></li>
+        <li><a href="/assets/index-63d545d2.css">CSS文件</a></li>
+    </ul>
+    
+    <h2>测试API接口：</h2>
+    <button onclick="testAPI()">测试API</button>
+    <div id="api-result"></div>
+    
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/system/config');
+                const data = await response.json();
+                document.getElementById('api-result').innerHTML = 
+                    '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('api-result').innerHTML = 
+                    '<p style="color: red;">API错误: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

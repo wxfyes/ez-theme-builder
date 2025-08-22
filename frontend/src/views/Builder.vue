@@ -131,21 +131,64 @@
 
                   <!-- 功能配置 -->
                   <el-tab-pane label="功能配置" name="features">
-                    <div class="form-section">
-                      <h3>商店功能</h3>
-                      <div class="config-item">
-                        <label>显示热销标记</label>
-                        <el-switch v-model="config.SHOP_CONFIG.showHotSaleBadge" />
-                      </div>
-                      <div class="config-item">
-                        <label>显示套餐特性卡片</label>
-                        <el-switch v-model="config.SHOP_CONFIG.showPlanFeatureCards" />
-                      </div>
-                      <div class="config-item">
-                        <label>自动选择最大周期</label>
-                        <el-switch v-model="config.SHOP_CONFIG.autoSelectMaxPeriod" />
-                      </div>
-                    </div>
+                                         <div class="form-section">
+                       <h3>商店功能</h3>
+                       <div class="config-item">
+                         <label>显示热销标记</label>
+                         <el-switch v-model="config.SHOP_CONFIG.showHotSaleBadge" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示套餐特性卡片</label>
+                         <el-switch v-model="config.SHOP_CONFIG.showPlanFeatureCards" />
+                       </div>
+                       <div class="config-item">
+                         <label>自动选择最大周期</label>
+                         <el-switch v-model="config.SHOP_CONFIG.autoSelectMaxPeriod" />
+                       </div>
+                       <div class="config-item">
+                         <label>隐藏周期标签页</label>
+                         <el-switch v-model="config.SHOP_CONFIG.hidePeriodTabs" />
+                       </div>
+                       <div class="config-item">
+                         <label>低库存阈值</label>
+                         <el-input-number v-model="config.SHOP_CONFIG.lowStockThreshold" :min="1" :max="100" />
+                       </div>
+                       <div class="config-item">
+                         <label>启用折扣计算</label>
+                         <el-switch v-model="config.SHOP_CONFIG.enableDiscountCalculation" />
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>商店弹窗</h3>
+                       <div class="config-item">
+                         <label>启用商店弹窗</label>
+                         <el-switch v-model="config.SHOP_CONFIG.popup.enabled" />
+                       </div>
+                       <div class="config-item" v-if="config.SHOP_CONFIG.popup.enabled">
+                         <label>弹窗标题</label>
+                         <el-input v-model="config.SHOP_CONFIG.popup.title" placeholder="用户须知" />
+                       </div>
+                       <div class="config-item" v-if="config.SHOP_CONFIG.popup.enabled">
+                         <label>弹窗内容</label>
+                         <el-input 
+                           v-model="config.SHOP_CONFIG.popup.content" 
+                           type="textarea" 
+                           :rows="3"
+                           placeholder="常规套餐默认每月订单日重置流量"
+                         />
+                       </div>
+                       <div class="config-item" v-if="config.SHOP_CONFIG.popup.enabled">
+                         <label>弹窗冷却时间</label>
+                         <el-input-number v-model="config.SHOP_CONFIG.popup.cooldownHours" :min="0" :max="168" />
+                         <span class="form-help">小时</span>
+                       </div>
+                       <div class="config-item" v-if="config.SHOP_CONFIG.popup.enabled">
+                         <label>关闭等待时间</label>
+                         <el-input-number v-model="config.SHOP_CONFIG.popup.closeWaitSeconds" :min="0" :max="60" />
+                         <span class="form-help">秒</span>
+                       </div>
+                     </div>
 
                     <div class="form-section">
                       <h3>仪表盘功能</h3>
@@ -165,31 +208,175 @@
                         <label>显示在线设备限制</label>
                         <el-switch v-model="config.DASHBOARD_CONFIG.showOnlineDevicesLimit" />
                       </div>
-                    </div>
+                                             <div class="config-item">
+                         <label>显示导入订阅按钮</label>
+                         <el-switch v-model="config.DASHBOARD_CONFIG.showImportSubscription" />
+                       </div>
+                       <div class="config-item">
+                         <label>导入按钮高亮背景</label>
+                         <el-switch v-model="config.DASHBOARD_CONFIG.importButtonHighlightBtnbgcolor" />
+                       </div>
+                                              <div class="config-item">
+                         <label>客户端连接数限制</label>
+                         <el-input-number 
+                           v-model="config.DASHBOARD_CONFIG.clientConnectionLimit" 
+                           :min="1" 
+                           :max="999"
+                           placeholder="输入连接数限制"
+                         />
+                         <span class="form-help">个设备</span>
+                       </div>
+                       <div class="config-item">
+                         <label>重置流量显示模式</label>
+                         <el-select v-model="config.DASHBOARD_CONFIG.resetTrafficDisplayMode">
+                           <el-option label="低流量时显示" value="low" />
+                           <el-option label="始终显示" value="always" />
+                           <el-option label="隐藏" value="hidden" />
+                         </el-select>
+                       </div>
+                       <div class="config-item">
+                         <label>低流量阈值</label>
+                         <el-input-number v-model="config.DASHBOARD_CONFIG.lowTrafficThreshold" :min="1" :max="1000" />
+                         <span class="form-help">GB</span>
+                       </div>
+                       <div class="config-item">
+                         <label>续费套餐显示模式</label>
+                         <el-select v-model="config.DASHBOARD_CONFIG.renewPlanDisplayMode">
+                           <el-option label="始终显示" value="always" />
+                           <el-option label="即将到期时显示" value="expiring" />
+                           <el-option label="隐藏" value="hidden" />
+                         </el-select>
+                       </div>
+                       <div class="config-item">
+                         <label>即将到期阈值</label>
+                         <el-input-number v-model="config.DASHBOARD_CONFIG.expiringThreshold" :min="1" :max="30" />
+                         <span class="form-help">天</span>
+                       </div>
+                     </div>
 
-                    <div class="form-section">
-                      <h3>客户端下载</h3>
-                      <div class="config-item">
-                        <label>显示下载卡片</label>
-                        <el-switch v-model="config.CLIENT_CONFIG.showDownloadCard" />
-                      </div>
-                      <div class="config-item">
-                        <label>显示iOS客户端</label>
-                        <el-switch v-model="config.CLIENT_CONFIG.showIOS" />
-                      </div>
-                      <div class="config-item">
-                        <label>显示Android客户端</label>
-                        <el-switch v-model="config.CLIENT_CONFIG.showAndroid" />
-                      </div>
-                      <div class="config-item">
-                        <label>显示Windows客户端</label>
-                        <el-switch v-model="config.CLIENT_CONFIG.showWindows" />
-                      </div>
-                      <div class="config-item">
-                        <label>显示MacOS客户端</label>
-                        <el-switch v-model="config.CLIENT_CONFIG.showMacOS" />
-                      </div>
-                    </div>
+                     <div class="form-section">
+                       <h3>流量日志配置</h3>
+                       <div class="config-item">
+                         <label>启用流量日志</label>
+                         <el-switch v-model="config.TRAFFICLOG_CONFIG.enableTrafficLog" />
+                       </div>
+                       <div class="config-item" v-if="config.TRAFFICLOG_CONFIG.enableTrafficLog">
+                         <label>显示天数</label>
+                         <el-input-number v-model="config.TRAFFICLOG_CONFIG.daysToShow" :min="7" :max="90" />
+                         <span class="form-help">天</span>
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>节点配置</h3>
+                       <div class="config-item">
+                         <label>显示节点速率</label>
+                         <el-switch v-model="config.NODES_CONFIG.showNodeRate" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示节点详情</label>
+                         <el-switch v-model="config.NODES_CONFIG.showNodeDetails" />
+                       </div>
+                       <div class="config-item">
+                         <label>允许查看节点信息</label>
+                         <el-switch v-model="config.NODES_CONFIG.allowViewNodeInfo" />
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>个人资料配置</h3>
+                       <div class="config-item">
+                         <label>显示礼品卡兑换</label>
+                         <el-switch v-model="config.PROFILE_CONFIG.showGiftCardRedeem" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示最近设备</label>
+                         <el-switch v-model="config.PROFILE_CONFIG.showRecentDevices" />
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>邀请配置</h3>
+                       <div class="config-item">
+                         <label>显示佣金徽章</label>
+                         <el-switch v-model="config.INVITE_CONFIG.showCommissionBadge" />
+                       </div>
+                       <div class="config-item">
+                         <label>每页记录数</label>
+                         <el-input-number v-model="config.INVITE_CONFIG.recordsPerPage" :min="5" :max="50" />
+                       </div>
+                       <div class="config-item">
+                         <label>邀请链接模式</label>
+                         <el-select v-model="config.INVITE_CONFIG.inviteLinkConfig.linkMode">
+                           <el-option label="自动生成" value="auto" />
+                           <el-option label="自定义域名" value="custom" />
+                         </el-select>
+                       </div>
+                       <div class="config-item" v-if="config.INVITE_CONFIG.inviteLinkConfig.linkMode === 'custom'">
+                         <label>自定义域名</label>
+                         <el-input v-model="config.INVITE_CONFIG.inviteLinkConfig.customDomain" placeholder="https://example.com" />
+                       </div>
+                     </div>
+
+                                         <div class="form-section">
+                       <h3>客户端下载</h3>
+                       <div class="config-item">
+                         <label>显示下载卡片</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showDownloadCard" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示iOS客户端</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showIOS" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示Android客户端</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showAndroid" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示Windows客户端</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showWindows" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示MacOS客户端</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showMacOS" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示Linux客户端</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showLinux" />
+                       </div>
+                       <div class="config-item">
+                         <label>显示OpenWrt客户端</label>
+                         <el-switch v-model="config.CLIENT_CONFIG.showOpenWrt" />
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>自定义下载链接</h3>
+                       <div class="config-item">
+                         <label>iOS下载链接</label>
+                         <el-input v-model="config.CLIENT_CONFIG.clientLinks.ios" placeholder="https://apps.apple.com/ca/app/shadowrocket/id932747118" />
+                       </div>
+                       <div class="config-item">
+                         <label>Android下载链接</label>
+                         <el-input v-model="config.CLIENT_CONFIG.clientLinks.android" placeholder="https://github.com/wxfyes/FlClash/releases" />
+                       </div>
+                       <div class="config-item">
+                         <label>Windows下载链接</label>
+                         <el-input v-model="config.CLIENT_CONFIG.clientLinks.windows" placeholder="https://github.com/wxfyes/FlClash/releases" />
+                       </div>
+                       <div class="config-item">
+                         <label>MacOS下载链接</label>
+                         <el-input v-model="config.CLIENT_CONFIG.clientLinks.macos" placeholder="https://github.com/wxfyes/FlClash/releases" />
+                       </div>
+                       <div class="config-item">
+                         <label>Linux下载链接</label>
+                         <el-input v-model="config.CLIENT_CONFIG.clientLinks.linux" placeholder="https://github.com/wxfyes/FlClash/releases" />
+                       </div>
+                       <div class="config-item">
+                         <label>OpenWrt下载链接</label>
+                         <el-input v-model="config.CLIENT_CONFIG.clientLinks.openwrt" placeholder="https://github.com/xxx/releases/latest" />
+                       </div>
+                     </div>
                   </el-tab-pane>
 
                   <!-- 高级配置 -->
@@ -222,21 +409,125 @@
                       </div>
                     </div>
 
-                    <div class="form-section">
-                      <h3>支付配置</h3>
-                      <div class="config-item">
-                        <label>新标签页打开支付</label>
-                        <el-switch v-model="config.PAYMENT_CONFIG.openPaymentInNewTab" />
-                      </div>
-                      <div class="config-item">
-                        <label>自动检测支付状态</label>
-                        <el-switch v-model="config.PAYMENT_CONFIG.autoCheckPayment" />
-                      </div>
-                      <div class="config-item">
-                        <label>支付二维码大小</label>
-                        <el-input-number v-model="config.PAYMENT_CONFIG.qrcodeSize" :min="100" :max="400" />
-                      </div>
-                    </div>
+                                         <div class="form-section">
+                       <h3>支付配置</h3>
+                       <div class="config-item">
+                         <label>新标签页打开支付</label>
+                         <el-switch v-model="config.PAYMENT_CONFIG.openPaymentInNewTab" />
+                       </div>
+                       <div class="config-item">
+                         <label>自动检测支付状态</label>
+                         <el-switch v-model="config.PAYMENT_CONFIG.autoCheckPayment" />
+                       </div>
+                       <div class="config-item">
+                         <label>支付二维码大小</label>
+                         <el-input-number v-model="config.PAYMENT_CONFIG.qrcodeSize" :min="100" :max="400" />
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>工单配置</h3>
+                       <div class="config-item">
+                         <label>工单中包含用户信息</label>
+                         <el-switch v-model="config.TICKET_CONFIG.includeUserInfoInTicket" />
+                       </div>
+                       <div class="config-item">
+                         <label>启用工单弹窗</label>
+                         <el-switch v-model="config.TICKET_CONFIG.popup.enabled" />
+                       </div>
+                       <div class="config-item" v-if="config.TICKET_CONFIG.popup.enabled">
+                         <label>工单弹窗标题</label>
+                         <el-input v-model="config.TICKET_CONFIG.popup.title" placeholder="工单须知" />
+                       </div>
+                       <div class="config-item" v-if="config.TICKET_CONFIG.popup.enabled">
+                         <label>工单弹窗内容</label>
+                         <el-input 
+                           v-model="config.TICKET_CONFIG.popup.content" 
+                           type="textarea" 
+                           :rows="3"
+                           placeholder="请您准确描述您的问题，再提交工单，以便我们更快帮助您。"
+                         />
+                       </div>
+                       <div class="config-item" v-if="config.TICKET_CONFIG.popup.enabled">
+                         <label>弹窗冷却时间</label>
+                         <el-input-number v-model="config.TICKET_CONFIG.popup.cooldownHours" :min="0" :max="168" />
+                         <span class="form-help">小时</span>
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>图床配置</h3>
+                       <div class="config-item">
+                         <label>启用图片上传</label>
+                         <el-switch v-model="config.TICKET_CONFIG.imageUpload.enabled" />
+                       </div>
+                       <div class="config-item" v-if="config.TICKET_CONFIG.imageUpload.enabled">
+                         <label>上传方式</label>
+                         <el-select v-model="config.TICKET_CONFIG.imageUpload.uploadMethod">
+                           <el-option label="图床" value="imagebed" />
+                           <el-option label="WebDAV" value="webdav" />
+                         </el-select>
+                       </div>
+                       <div class="config-item" v-if="config.TICKET_CONFIG.imageUpload.enabled">
+                         <label>最大文件数</label>
+                         <el-input-number v-model="config.TICKET_CONFIG.imageUpload.maxFiles" :min="1" :max="20" />
+                       </div>
+                       <div class="config-item" v-if="config.TICKET_CONFIG.imageUpload.enabled">
+                         <label>最大文件大小</label>
+                         <el-input-number v-model="config.TICKET_CONFIG.imageUpload.maxSize" :min="1024000" :max="10485760" />
+                         <span class="form-help">字节</span>
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>钱包配置</h3>
+                       <div class="config-item">
+                         <label>预设金额</label>
+                         <el-input 
+                           :model-value="config.WALLET_CONFIG.presetAmounts.join(',')"
+                           @input="(val) => config.WALLET_CONFIG.presetAmounts = val.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v))"
+                           placeholder="50,100,200,300,400,500,600,800"
+                         />
+                         <span class="form-help">用逗号分隔</span>
+                       </div>
+                       <div class="config-item">
+                         <label>默认选中金额</label>
+                         <el-input-number v-model="config.WALLET_CONFIG.defaultSelectedAmount" :min="0" />
+                         <span class="form-help">0表示不默认选中</span>
+                       </div>
+                       <div class="config-item">
+                         <label>最小充值金额</label>
+                         <el-input-number v-model="config.WALLET_CONFIG.minimumDepositAmount" :min="1" />
+                       </div>
+                     </div>
+
+                     <div class="form-section">
+                       <h3>浏览器限制配置</h3>
+                       <div class="config-item">
+                         <label>启用浏览器限制</label>
+                         <el-switch v-model="config.BROWSER_RESTRICT_CONFIG.enabled" />
+                       </div>
+                       <div class="config-item" v-if="config.BROWSER_RESTRICT_CONFIG.enabled">
+                         <label>限制360浏览器</label>
+                         <el-switch v-model="config.BROWSER_RESTRICT_CONFIG.restrictBrowsers['360']" />
+                       </div>
+                       <div class="config-item" v-if="config.BROWSER_RESTRICT_CONFIG.enabled">
+                         <label>限制QQ浏览器</label>
+                         <el-switch v-model="config.BROWSER_RESTRICT_CONFIG.restrictBrowsers['QQ']" />
+                       </div>
+                       <div class="config-item" v-if="config.BROWSER_RESTRICT_CONFIG.enabled">
+                         <label>限制微信浏览器</label>
+                         <el-switch v-model="config.BROWSER_RESTRICT_CONFIG.restrictBrowsers['WeChat']" />
+                       </div>
+                       <div class="config-item" v-if="config.BROWSER_RESTRICT_CONFIG.enabled">
+                         <label>限制百度浏览器</label>
+                         <el-switch v-model="config.BROWSER_RESTRICT_CONFIG.restrictBrowsers['Baidu']" />
+                       </div>
+                       <div class="config-item" v-if="config.BROWSER_RESTRICT_CONFIG.enabled">
+                         <label>限制搜狗浏览器</label>
+                         <el-switch v-model="config.BROWSER_RESTRICT_CONFIG.restrictBrowsers['Sogou']" />
+                       </div>
+                     </div>
                   </el-tab-pane>
                 </el-tabs>
               </div>
@@ -261,10 +552,16 @@
                     <div class="preview-item">
                       <strong>默认语言:</strong> {{ config.DEFAULT_CONFIG.defaultLanguage }}
                     </div>
-                    <div class="preview-item">
-                      <strong>默认主题:</strong> {{ config.DEFAULT_CONFIG.defaultTheme }}
-                    </div>
-                  </div>
+                                         <div class="preview-item">
+                       <strong>默认主题:</strong> {{ config.DEFAULT_CONFIG.defaultTheme }}
+                     </div>
+                     <div class="preview-item">
+                       <strong>客户端连接限制:</strong> {{ config.DASHBOARD_CONFIG.clientConnectionLimit }} 个设备
+                     </div>
+                     <div class="preview-item">
+                       <strong>显示导入订阅:</strong> {{ config.DASHBOARD_CONFIG.showImportSubscription ? '是' : '否' }}
+                     </div>
+                   </div>
                 </div>
 
                 <div class="card">
@@ -431,18 +728,19 @@ export default {
         confirmOrder: true,
         confirmOrderContent: "<p>无法提供相关教程和使用说明。</p>"
       },
-      DASHBOARD_CONFIG: {
-        showUserEmail: false,
-        importButtonHighlightBtnbgcolor: true,
-        enableResetTraffic: true,
-        resetTrafficDisplayMode: 'low',
-        lowTrafficThreshold: 10,
-        enableRenewPlan: true,
-        renewPlanDisplayMode: 'always',
-        expiringThreshold: 7,
-        showOnlineDevicesLimit: true,
-        showImportSubscription: true
-      },
+             DASHBOARD_CONFIG: {
+         showUserEmail: false,
+         importButtonHighlightBtnbgcolor: true,
+         enableResetTraffic: true,
+         resetTrafficDisplayMode: 'low',
+         lowTrafficThreshold: 10,
+         enableRenewPlan: true,
+         renewPlanDisplayMode: 'always',
+         expiringThreshold: 7,
+         showOnlineDevicesLimit: true,
+         showImportSubscription: true,
+         clientConnectionLimit: 3
+       },
       CLIENT_CONFIG: {
         showDownloadCard: true,
         showIOS: true,
@@ -846,9 +1144,43 @@ export default {
   color: #409eff;
 }
 
-.action-buttons {
-  margin-top: 1rem;
-}
+ .action-buttons {
+   margin-top: 1rem;
+ }
+
+ .form-help {
+   margin-left: 0.5rem;
+   color: #666;
+   font-size: 0.875rem;
+ }
+
+ .config-item {
+   margin-bottom: 1.5rem;
+ }
+
+ .config-item label {
+   display: block;
+   margin-bottom: 0.5rem;
+   font-weight: 500;
+   color: #333;
+ }
+
+ .form-section {
+   margin-bottom: 2rem;
+   padding: 1.5rem;
+   background: #f8f9fa;
+   border-radius: 8px;
+   border: 1px solid #e9ecef;
+ }
+
+ .form-section h3 {
+   margin-top: 0;
+   margin-bottom: 1.5rem;
+   color: #495057;
+   font-size: 1.1rem;
+   border-bottom: 2px solid #dee2e6;
+   padding-bottom: 0.5rem;
+ }
 
 @media (max-width: 768px) {
   .header-content {

@@ -77,6 +77,9 @@
                   </div>
                   <div class="build-details">
                     <p>创建时间: {{ formatDate(build.created_at) }}</p>
+                    <p v-if="build.status_detail" class="status-detail">
+                      状态详情: {{ build.status_detail }}
+                    </p>
                     <p v-if="build.download_url">下载链接: {{ build.download_url }}</p>
                   </div>
                 </div>
@@ -267,10 +270,13 @@ export default {
     const retryBuild = async (buildId) => {
       retrying.value = buildId
       try {
-        // 这里需要后端支持重试功能
-        ElMessage.info('重试功能开发中...')
+        const response = await axios.post(`/api/builds/${buildId}/retry`)
+        ElMessage.success(response.data.message || '重试构建已开始')
+        // 重新加载构建列表
+        await loadBuilds()
       } catch (error) {
-        ElMessage.error('重试失败')
+        const errorMessage = error.response?.data?.error || '重试失败'
+        ElMessage.error(errorMessage)
         console.error('重试失败:', error)
       } finally {
         retrying.value = null
@@ -423,6 +429,16 @@ export default {
   margin: 0.25rem 0;
   color: #666;
   font-size: 0.9rem;
+}
+
+.status-detail {
+  color: #409eff !important;
+  font-weight: 500;
+  background-color: #f0f9ff;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border-left: 3px solid #409eff;
+  margin: 0.5rem 0 !important;
 }
 
 .build-actions {

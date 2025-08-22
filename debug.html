@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>前端调试页面</title>
+</head>
+<body>
+    <h1>前端应用调试</h1>
+    
+    <h2>1. 检查HTML文件</h2>
+    <button onclick="loadHTML()">加载前端HTML</button>
+    <div id="html-result"></div>
+    
+    <h2>2. 检查JavaScript文件</h2>
+    <button onclick="loadJS()">加载JavaScript</button>
+    <div id="js-result"></div>
+    
+    <h2>3. 检查CSS文件</h2>
+    <button onclick="loadCSS()">加载CSS</button>
+    <div id="css-result"></div>
+    
+    <h2>4. 检查Vue应用</h2>
+    <div id="app">
+        <p>如果Vue正常工作，这里会显示内容</p>
+    </div>
+    
+    <script>
+        async function loadHTML() {
+            try {
+                const response = await fetch('/');
+                const html = await response.text();
+                document.getElementById('html-result').innerHTML = 
+                    '<pre style="max-height: 200px; overflow: auto;">' + html + '</pre>';
+            } catch (error) {
+                document.getElementById('html-result').innerHTML = 
+                    '<p style="color: red;">HTML加载错误: ' + error.message + '</p>';
+            }
+        }
+        
+        async function loadJS() {
+            try {
+                const response = await fetch('/assets/index-34f661b1.js');
+                const js = await response.text();
+                document.getElementById('js-result').innerHTML = 
+                    '<p style="color: green;">JavaScript文件加载成功，大小: ' + js.length + ' 字符</p>';
+                // 尝试执行JavaScript
+                try {
+                    eval(js);
+                    document.getElementById('js-result').innerHTML += 
+                        '<p style="color: green;">JavaScript执行成功</p>';
+                } catch (e) {
+                    document.getElementById('js-result').innerHTML += 
+                        '<p style="color: orange;">JavaScript执行错误: ' + e.message + '</p>';
+                }
+            } catch (error) {
+                document.getElementById('js-result').innerHTML = 
+                    '<p style="color: red;">JavaScript加载错误: ' + error.message + '</p>';
+            }
+        }
+        
+        async function loadCSS() {
+            try {
+                const response = await fetch('/assets/index-63d545d2.css');
+                const css = await response.text();
+                document.getElementById('css-result').innerHTML = 
+                    '<p style="color: green;">CSS文件加载成功，大小: ' + css.length + ' 字符</p>';
+            } catch (error) {
+                document.getElementById('css-result').innerHTML = 
+                    '<p style="color: red;">CSS加载错误: ' + error.message + '</p>';
+            }
+        }
+        
+        // 页面加载时自动检查
+        window.onload = function() {
+            loadHTML();
+            loadJS();
+            loadCSS();
+        };
+    </script>
+</body>
+</html>
