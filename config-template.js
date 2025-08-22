@@ -97,4 +97,5 @@ export const config = {
         }
     }
 };
-window.EZ_CONFIG = config
+
+window.EZ_CONFIG = config;

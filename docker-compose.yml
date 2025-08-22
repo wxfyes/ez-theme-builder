@@ -3,39 +3,19 @@ version: '3.8'
 services:
   ez-theme-builder:
     build: .
-    container_name: ez-theme-builder
-    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-      - EZ_THEME_PATH=/app/ez-theme
+      - JWT_SECRET=your-jwt-secret-here
     volumes:
+      - ./data:/app/data
       - ./builds:/app/builds
       - ./temp:/app/temp
-      - ./logs:/app/logs
-      - ./database.sqlite:/app/database.sqlite
-      - ./ez-theme:/app/ez-theme
-    networks:
-      - ez-theme-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: ez-theme-nginx
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - ez-theme-builder
-    networks:
-      - ez-theme-network
-
-networks:
-  ez-theme-network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

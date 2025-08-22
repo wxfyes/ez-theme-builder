@@ -32,6 +32,21 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// 配置multer用于文件上传
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 限制5MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('只允许上传图片文件'));
+    }
+  }
+});
+
 // 速率限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
@@ -296,56 +311,61 @@ app.post('/api/orders/:orderId/pay', authenticateToken, (req, res) => {
 });
 
 // 创建主题构建
-app.post('/api/builds/create', authenticateToken, [
-  body('config_data').isObject().withMessage('配置数据格式错误')
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  // 检查用户余额
-  db.get('SELECT credits FROM users WHERE id = ?', [req.user.id], (err, user) => {
-    if (err || !user) {
-      return res.status(404).json({ error: '用户不存在' });
+app.post('/api/builds/create', authenticateToken, upload.single('logo'), async (req, res) => {
+  try {
+    // 解析配置数据
+    let configData;
+    try {
+      configData = JSON.parse(req.body.config_data);
+    } catch (error) {
+      return res.status(400).json({ error: '配置数据格式错误' });
     }
 
-    db.get('SELECT value FROM system_config WHERE key = ?', ['price_per_build'], (err, config) => {
-      const pricePerBuild = parseInt(config?.value || 10);
-      
-      if (user.credits < pricePerBuild) {
-        return res.status(402).json({ error: '余额不足，请先充值' });
+    // 检查用户余额
+    db.get('SELECT credits FROM users WHERE id = ?', [req.user.id], (err, user) => {
+      if (err || !user) {
+        return res.status(404).json({ error: '用户不存在' });
       }
 
-      const { config_data } = req.body;
-      const buildId = `BUILD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // 扣除余额
-      db.run('UPDATE users SET credits = credits - ? WHERE id = ?', [pricePerBuild, req.user.id], (err) => {
-        if (err) {
-          return res.status(500).json({ error: '扣除余额失败' });
+      db.get('SELECT value FROM system_config WHERE key = ?', ['price_per_build'], (err, config) => {
+        const pricePerBuild = parseInt(config?.value || 10);
+        
+        if (user.credits < pricePerBuild) {
+          return res.status(402).json({ error: '余额不足，请先充值' });
         }
 
-        // 创建构建记录
-        db.run('INSERT INTO builds (user_id, build_id, config_data) VALUES (?, ?, ?)',
-          [req.user.id, buildId, JSON.stringify(config_data)],
-          function(err) {
+        const buildId = `BUILD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // 扣除余额
+        db.run('UPDATE users SET credits = credits - ? WHERE id = ?', [pricePerBuild, req.user.id], (err) => {
           if (err) {
-            return res.status(500).json({ error: '创建构建失败' });
+            return res.status(500).json({ error: '扣除余额失败' });
           }
 
-          // 异步处理构建
-          processBuild(buildId, config_data);
+          // 创建构建记录
+          db.run('INSERT INTO builds (user_id, build_id, config_data) VALUES (?, ?, ?)',
+            [req.user.id, buildId, JSON.stringify(configData)],
+            function(err) {
+            if (err) {
+              return res.status(500).json({ error: '创建构建失败' });
+            }
 
-          res.json({
-            build_id: buildId,
-            status: 'pending',
-            message: '构建已开始，请稍后查看结果'
+            // 异步处理构建，传递logo文件
+            processBuild(buildId, configData, req.file);
+
+            res.json({
+              build_id: buildId,
+              status: 'pending',
+              message: '构建已开始，请稍后查看结果'
+            });
           });
         });
       });
     });
-  });
+  } catch (error) {
+    console.error('构建创建错误:', error);
+    res.status(500).json({ error: '构建创建失败' });
+  }
 });
 
 // 使用API密钥创建构建
@@ -540,7 +560,7 @@ app.post('/api/admin/config', authenticateToken, (req, res) => {
 });
 
 // 异步处理构建
-async function processBuild(buildId, configData) {
+async function processBuild(buildId, configData, logoFile = null) {
   try {
     console.log('==========================================');
     console.log(`🚀 开始处理构建: ${buildId}`);
@@ -657,6 +677,37 @@ async function processBuild(buildId, configData) {
       console.error('配置文件生成失败:', configError);
       // 不抛出错误，继续构建过程
       console.log('配置文件生成失败，但继续构建过程');
+    }
+
+    // 处理Logo文件
+    if (logoFile) {
+      console.log('=== 开始处理Logo文件 ===');
+      try {
+        const logoPath = path.join(buildDir, 'public', 'images', 'logo.png');
+        console.log('Logo目标路径:', logoPath);
+        
+        // 确保目录存在
+        await fs.ensureDir(path.dirname(logoPath));
+        
+        // 写入logo文件
+        await fs.writeFile(logoPath, logoFile.buffer);
+        console.log('Logo文件写入完成');
+        
+        // 验证文件是否写入成功
+        const logoExists = await fs.pathExists(logoPath);
+        if (logoExists) {
+          const stats = await fs.stat(logoPath);
+          console.log('Logo文件验证成功，文件大小:', stats.size, '字节');
+        } else {
+          console.log('警告: Logo文件写入后未找到');
+        }
+      } catch (logoError) {
+        console.error('Logo文件处理失败:', logoError);
+        // 不抛出错误，继续构建过程
+        console.log('Logo文件处理失败，但继续构建过程');
+      }
+    } else {
+      console.log('未提供Logo文件，使用默认Logo');
     }
 
     // 在打包之前验证配置文件
@@ -789,6 +840,22 @@ app.use('/', express.static(path.join(__dirname, 'frontend', 'dist'), {
     res.setHeader('Strict-Transport-Security', 'max-age=0');
   }
 }));
+
+// 健康检查路由
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// 快速启动检查路由
+app.get('/api/ping', (req, res) => {
+  res.status(200).send('pong');
+});
 
 // 测试路由
 app.get('/test', (req, res) => {

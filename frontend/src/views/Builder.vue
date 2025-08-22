@@ -75,6 +75,26 @@
                         <el-input v-model="config.SITE_CONFIG.siteDescription" placeholder="输入网站描述" />
                       </div>
                       <div class="config-item">
+                        <label>网站Logo</label>
+                        <div class="logo-upload">
+                          <el-upload
+                            ref="logoUpload"
+                            :auto-upload="false"
+                            :show-file-list="false"
+                            :on-change="handleLogoChange"
+                            accept="image/*"
+                            class="logo-uploader"
+                          >
+                            <img v-if="logoPreview" :src="logoPreview" class="logo-preview" />
+                            <el-icon v-else class="logo-uploader-icon"><Plus /></el-icon>
+                          </el-upload>
+                          <div class="logo-info">
+                            <p>支持PNG、JPG、JPEG格式，建议尺寸200x200px</p>
+                            <el-button v-if="logoPreview" type="danger" size="small" @click="removeLogo">删除Logo</el-button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="config-item">
                         <label>主题色</label>
                         <el-color-picker v-model="config.DEFAULT_CONFIG.primaryColor" />
                       </div>
@@ -133,7 +153,7 @@
                             <el-icon><Plus /></el-icon>
                             添加URL
                           </el-button>
-                        </div>
+                                                 </div>
                       </div>
                       <div class="config-item">
                         <label>启用中间件代理</label>
@@ -142,6 +162,7 @@
                       <div class="config-item">
                         <label>静默API检测</label>
                         <el-switch v-model="config.SILENT_API_CHECK" />
+
                       </div>
                     </div>
                   </el-tab-pane>
@@ -653,6 +674,8 @@ export default {
     const activeTab = ref('basic')
     const building = ref(false)
     const systemConfig = ref({})
+    const logoPreview = ref('')
+    const logoFile = ref(null)
 
     const user = computed(() => authStore.user)
     const isAdmin = computed(() => authStore.isAdmin)
@@ -1021,8 +1044,22 @@ export default {
 
         building.value = true
         
-        const response = await axios.post('/api/builds/create', {
-          config_data: config
+        // 创建FormData对象，支持文件上传
+        const formData = new FormData()
+        formData.append('config_data', JSON.stringify(config))
+        
+        // 如果有logo文件，添加到FormData
+        if (logoFile.value) {
+          console.log('添加Logo文件到FormData:', logoFile.value)
+          formData.append('logo', logoFile.value)
+        } else {
+          console.log('没有Logo文件需要上传')
+        }
+        
+        const response = await axios.post('/api/builds/create', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         })
 
         ElMessage.success('构建已开始，请稍后查看结果')
@@ -1066,6 +1103,46 @@ export default {
       }
     }
 
+    // Logo处理方法
+    const handleLogoChange = (file) => {
+      console.log('Logo文件选择:', file)
+      console.log('文件对象:', file)
+      
+      // 检查文件对象结构
+      if (!file || !file.raw) {
+        console.error('文件对象结构不正确:', file)
+        ElMessage.error('文件选择失败，请重试!')
+        return false
+      }
+      
+      const fileObj = file.raw || file
+      console.log('文件类型:', fileObj.type)
+      console.log('文件大小:', fileObj.size)
+      
+      const isImage = fileObj.type && fileObj.type.startsWith('image/')
+      const isLt2M = fileObj.size && fileObj.size / 1024 / 1024 < 2
+
+      if (!isImage) {
+        ElMessage.error('只能上传图片文件!')
+        return false
+      }
+      if (!isLt2M) {
+        ElMessage.error('图片大小不能超过 2MB!')
+        return false
+      }
+
+      logoFile.value = fileObj
+      logoPreview.value = URL.createObjectURL(fileObj)
+      
+      console.log('Logo文件设置成功')
+      ElMessage.success('Logo文件选择成功!')
+    }
+
+    const removeLogo = () => {
+      logoFile.value = null
+      logoPreview.value = ''
+    }
+
     return {
       activeIndex,
       activeTab,
@@ -1075,12 +1152,16 @@ export default {
       isAdmin,
       config,
       canBuild,
+      logoPreview,
+      logoFile,
       handleSelect,
       handleCommand,
       resetConfig,
       handleBuild,
       addUrl,
-      removeUrl
+      removeUrl,
+      handleLogoChange,
+      removeLogo
     }
   }
 }
@@ -1242,6 +1323,56 @@ export default {
  .add-btn {
    align-self: flex-start;
    margin-top: 0.5rem;
+ }
+
+ .logo-upload {
+   display: flex;
+   flex-direction: column;
+   gap: 1rem;
+ }
+
+ .logo-uploader {
+   border: 1px dashed #d9d9d9;
+   border-radius: 6px;
+   cursor: pointer;
+   position: relative;
+   overflow: hidden;
+   width: 200px;
+   height: 200px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+ }
+
+ .logo-uploader:hover {
+   border-color: #409eff;
+ }
+
+ .logo-uploader-icon {
+   font-size: 28px;
+   color: #8c939d;
+   width: 178px;
+   height: 178px;
+   line-height: 178px;
+   text-align: center;
+ }
+
+ .logo-preview {
+   width: 100%;
+   height: 100%;
+   object-fit: contain;
+ }
+
+ .logo-info {
+   display: flex;
+   flex-direction: column;
+   gap: 0.5rem;
+ }
+
+ .logo-info p {
+   margin: 0;
+   color: #666;
+   font-size: 0.875rem;
  }
 
 @media (max-width: 768px) {
