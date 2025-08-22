@@ -1,0 +1,13 @@
+{
+  "name": "ez-theme-builder-keep-alive",
+  "version": "1.0.0",
+  "description": "EZ-Theme Builder保活脚本",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

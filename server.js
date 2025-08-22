@@ -656,7 +656,27 @@ async function processBuild(buildId, configData, logoFile = null) {
 
     // 复制预构建的基础项目
     console.log('复制预构建的基础项目...');
-    await fs.copy(baseBuildDir, buildDir);
+    
+    // 使用更安全的复制方法，排除node_modules
+    const copyOptions = {
+      filter: (src, dest) => {
+        // 排除node_modules目录
+        if (src.includes('node_modules')) {
+          return false;
+        }
+        // 排除.git目录
+        if (src.includes('.git')) {
+          return false;
+        }
+        // 排除临时文件
+        if (src.includes('.tmp') || src.includes('.temp')) {
+          return false;
+        }
+        return true;
+      }
+    };
+    
+    await fs.copy(baseBuildDir, buildDir, copyOptions);
     console.log('基础项目复制完成');
 
     console.log('=== 开始生成配置文件 ===');
@@ -836,12 +856,36 @@ window.EZ_CONFIG = config;`;
       await fs.writeFile(configJsFile, newConfigContent);
       console.log('外部配置文件替换完成');
       
-      // 重新构建项目以包含新的配置文件
-      console.log('=== 重新构建项目 ===');
+      // 重新安装依赖并构建项目
+      console.log('=== 重新安装依赖并构建项目 ===');
+      
+      // 先安装依赖
+      console.log('安装依赖...');
+      await new Promise((resolve, reject) => {
+        exec('npm install', { 
+          cwd: buildDir,
+          env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=512' }
+        }, (error, stdout, stderr) => {
+          if (error) {
+            console.error('依赖安装失败:', error);
+            reject(error);
+            return;
+          }
+          console.log('依赖安装完成');
+          resolve(stdout);
+        });
+      });
+      
+      // 然后构建项目
+      console.log('构建项目...');
       await new Promise((resolve, reject) => {
         exec('npm run build', { 
           cwd: buildDir,
-          env: { ...process.env, VUE_APP_CONFIGJS: 'false' }
+          env: { 
+            ...process.env, 
+            VUE_APP_CONFIGJS: 'false',
+            NODE_OPTIONS: '--max-old-space-size=512'
+          }
         }, (error, stdout, stderr) => {
           if (error) {
             console.error('重新构建错误:', error);

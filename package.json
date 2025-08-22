@@ -11,6 +11,8 @@
     "build:backend": "echo 'Backend build complete'",
     "install:all": "npm install && cd frontend && npm install",
     "prepare-base": "node prepare-base-build.js",
+    "safe-build": "node safe-build.js",
+    "lightweight-build": "node lightweight-build.js",
     "postinstall": "npm run prepare-base"
   },
   "keywords": [

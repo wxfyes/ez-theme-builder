@@ -4,10 +4,14 @@ services:
     env: node
     plan: free
     buildCommand: |
+      export NODE_OPTIONS="--max-old-space-size=256"
       npm install
       cd frontend && npm install && npm run build
-      cd .. && npm run prepare-base
-    startCommand: npm start
+      cd .. && npm run lightweight-build
+      echo "轻量级构建完成"
+    startCommand: |
+      export NODE_OPTIONS="--max-old-space-size=256"
+      npm start
     envVars:
       - key: NODE_ENV
         value: production
