@@ -322,11 +322,15 @@ wget -O quick-fix-ultimate.sh https://raw.githubusercontent.com/wxfyes/ez-theme-
 
 # 方法4：使用诊断脚本（先诊断问题）
 wget -O diagnose-build.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/diagnose-build.sh && chmod +x diagnose-build.sh && ./diagnose-build.sh
+
+# 方法5：使用依赖冲突修复脚本（解决ERESOLVE错误）
+wget -O fix-dependency-conflict.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/fix-dependency-conflict.sh && chmod +x fix-dependency-conflict.sh && ./fix-dependency-conflict.sh
 ```
 
 **注意**：
 - 如果遇到 `EEXIST: file already exists` 错误，请使用 `quick-fix-safe.sh` 脚本
 - 如果遇到 `No such file or directory` 错误（如 `./node_modules/.bin/vite: No such file or directory`），请使用 `quick-fix-ultimate.sh` 脚本
+- 如果遇到 `ERESOLVE unable to resolve dependency tree` 错误，请使用 `fix-dependency-conflict.sh` 脚本
 - 终极修复脚本会尝试多种构建方法，包括npx、本地路径、npm run build和直接node调用
 
 #### Git下载失败
