@@ -300,6 +300,25 @@ chmod +x download-direct.sh
 ./download-direct.sh
 ```
 
+### 4. 构建工具问题
+
+#### 构建工具错误
+如果遇到 `vue-cli-service: command not found` 或 `vite: command not found` 错误：
+
+```bash
+# 方法1：使用标准修复脚本
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/quick-fix.sh
+chmod +x quick-fix.sh
+./quick-fix.sh
+
+# 方法2：使用安全修复脚本（推荐，避免EEXIST错误）
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/quick-fix-safe.sh
+chmod +x quick-fix-safe.sh
+./quick-fix-safe.sh
+```
+
+**注意**：如果遇到 `EEXIST: file already exists` 错误，请使用 `quick-fix-safe.sh` 脚本，它避免全局安装，只使用本地依赖。
+
 #### Git下载失败
 如果Git克隆或拉取失败：
 
