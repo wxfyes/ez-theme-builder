@@ -482,20 +482,65 @@ app.post('/api/build/github-actions', authenticateToken, async (req, res) => {
 
           db.run('INSERT INTO builds (user_id, build_id, config_data, status) VALUES (?, ?, ?, ?)',
             [req.user.id, buildId, JSON.stringify(configData), 'github_actions'],
-            function(err) {
+            async function(err) {
             if (err) {
               return res.status(500).json({ error: '创建构建失败' });
             }
 
-            // 触发 GitHub Actions（这里只是记录，实际触发需要 GitHub Token）
-            console.log('GitHub Actions 构建已记录:', buildId);
+            // 触发 GitHub Actions
+            try {
+              const githubToken = process.env.GITHUB_TOKEN;
+              if (!githubToken) {
+                console.warn('GitHub Token 未配置，无法触发 GitHub Actions');
+                return res.json({
+                  success: true,
+                  build_id: buildId,
+                  message: 'GitHub Actions 构建已记录，但无法自动触发（需要配置 GitHub Token）',
+                  github_workflow_url: 'https://github.com/wxfyes/ez-theme-builder/actions'
+                });
+              }
 
-            res.json({
-              success: true,
-              build_id: buildId,
-              message: 'GitHub Actions 构建已触发，请稍后查看结果',
-              github_workflow_url: 'https://github.com/wxfyes/ez-theme-builder/actions'
-            });
+              const axios = require('axios');
+              const response = await axios.post(
+                `https://api.github.com/repos/wxfyes/ez-theme-builder/actions/workflows/build-theme.yml/dispatches`,
+                {
+                  ref: 'main',
+                  inputs: {
+                    panel_type: panel_type || 'Xiao-V2board',
+                    site_name: site_name || 'EZ Theme',
+                    site_description: site_description || '专业的主题生成服务',
+                    api_url: api_url || 'https://your-panel.com',
+                    force_rebuild: 'false'
+                  }
+                },
+                {
+                  headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                  }
+                }
+              );
+
+              console.log('GitHub Actions 触发成功:', response.status);
+              
+              res.json({
+                success: true,
+                build_id: buildId,
+                message: 'GitHub Actions 构建已触发，请稍后查看结果',
+                github_workflow_url: 'https://github.com/wxfyes/ez-theme-builder/actions'
+              });
+            } catch (githubError) {
+              console.error('GitHub Actions 触发失败:', githubError.response?.data || githubError.message);
+              
+              res.json({
+                success: true,
+                build_id: buildId,
+                message: 'GitHub Actions 构建已记录，但触发失败，请手动触发',
+                github_workflow_url: 'https://github.com/wxfyes/ez-theme-builder/actions',
+                error: 'GitHub Actions 触发失败，请检查 Token 配置'
+              });
+            }
           });
         });
       });
