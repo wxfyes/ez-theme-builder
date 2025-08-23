@@ -325,12 +325,16 @@ wget -O diagnose-build.sh https://raw.githubusercontent.com/wxfyes/ez-theme-buil
 
 # 方法5：使用依赖冲突修复脚本（解决ERESOLVE错误）
 wget -O fix-dependency-conflict.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/fix-dependency-conflict.sh && chmod +x fix-dependency-conflict.sh && ./fix-dependency-conflict.sh
+
+# 方法6：使用Debian 11专用修复脚本（推荐Debian系统使用）
+wget -O fix-debian-build.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/fix-debian-build.sh && chmod +x fix-debian-build.sh && ./fix-debian-build.sh
 ```
 
 **注意**：
 - 如果遇到 `EEXIST: file already exists` 错误，请使用 `quick-fix-safe.sh` 脚本
 - 如果遇到 `No such file or directory` 错误（如 `./node_modules/.bin/vite: No such file or directory`），请使用 `quick-fix-ultimate.sh` 脚本
 - 如果遇到 `ERESOLVE unable to resolve dependency tree` 错误，请使用 `fix-dependency-conflict.sh` 脚本
+- **Debian 11 系统用户**：推荐使用 `fix-debian-build.sh` 脚本，专门处理Debian系统的构建问题
 - 终极修复脚本会尝试多种构建方法，包括npx、本地路径、npm run build和直接node调用
 
 #### Git下载失败
