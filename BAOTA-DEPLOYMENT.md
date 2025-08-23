@@ -319,6 +319,9 @@ chmod +x quick-fix-safe.sh
 # 方法3：使用终极修复脚本（推荐，处理所有构建问题）
 # 一键下载、设置权限并运行
 wget -O quick-fix-ultimate.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/quick-fix-ultimate.sh && chmod +x quick-fix-ultimate.sh && ./quick-fix-ultimate.sh
+
+# 方法4：使用诊断脚本（先诊断问题）
+wget -O diagnose-build.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/diagnose-build.sh && chmod +x diagnose-build.sh && ./diagnose-build.sh
 ```
 
 **注意**：

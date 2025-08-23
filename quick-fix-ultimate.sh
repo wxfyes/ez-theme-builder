@@ -23,22 +23,32 @@ echo "🔍 检查构建工具..."
 # 检查vite是否在package.json中
 if grep -q '"vite"' package.json; then
     echo "✅ 发现Vite依赖"
-    # 确保vite被正确安装
+    # 确保vite被正确安装并创建可执行文件链接
     if [ ! -f "node_modules/.bin/vite" ]; then
         echo "⚠️  Vite未在.bin目录中找到，重新安装..."
+        npm uninstall vite
         npm install vite --save-dev
+        # 强制重新创建链接
+        npm rebuild vite
     fi
 fi
 
 # 检查vue-cli-service是否在package.json中
 if grep -q '"@vue/cli-service"' package.json; then
     echo "✅ 发现Vue CLI依赖"
-    # 确保vue-cli-service被正确安装
+    # 确保vue-cli-service被正确安装并创建可执行文件链接
     if [ ! -f "node_modules/.bin/vue-cli-service" ]; then
         echo "⚠️  Vue CLI Service未在.bin目录中找到，重新安装..."
+        npm uninstall @vue/cli-service
         npm install @vue/cli-service --save-dev
+        # 强制重新创建链接
+        npm rebuild @vue/cli-service
     fi
 fi
+
+# 检查并修复npm链接
+echo "🔧 修复npm链接..."
+npm rebuild
 
 echo "🔧 修复构建脚本..."
 # 备份package.json
@@ -99,12 +109,34 @@ if [ "$BUILD_SUCCESS" = false ]; then
     fi
 fi
 
+# 方法5: 强制重新安装并尝试
+if [ "$BUILD_SUCCESS" = false ]; then
+    echo "尝试强制重新安装构建工具..."
+    # 清理并重新安装
+    rm -rf node_modules package-lock.json
+    npm install
+    npm rebuild
+    
+    # 再次尝试npx
+    if npx vite --version &> /dev/null; then
+        echo "重新安装后使用npx vite构建..."
+        npx vite build && BUILD_SUCCESS=true
+    elif npx vue-cli-service --version &> /dev/null; then
+        echo "重新安装后使用npx vue-cli-service构建..."
+        npx vue-cli-service build && BUILD_SUCCESS=true
+    fi
+fi
+
 if [ "$BUILD_SUCCESS" = false ]; then
     echo "❌ 所有构建方法都失败了"
     echo "检查package.json中的依赖..."
     cat package.json | grep -E '"vite"|"@vue/cli-service"'
     echo "检查node_modules目录..."
-    ls -la node_modules/.bin/ | grep -E "vite|vue-cli"
+    ls -la node_modules/.bin/ | grep -E "vite|vue-cli" || echo "没有找到vite或vue-cli相关文件"
+    echo "检查vite包是否正确安装..."
+    ls -la node_modules/vite/ 2>/dev/null || echo "vite包未找到"
+    echo "检查vue-cli-service包是否正确安装..."
+    ls -la node_modules/@vue/cli-service/ 2>/dev/null || echo "vue-cli-service包未找到"
     exit 1
 else
     echo "✅ 构建成功！"
