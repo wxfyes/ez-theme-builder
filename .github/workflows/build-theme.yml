@@ -132,44 +132,44 @@ jobs:
            - 修改 `SITE_CONFIG.siteDescription` 为你的网站描述
            - 修改 `DEFAULT_CONFIG.primaryColor` 为主题色
 
-                 ## 文件结构
-         ```
-         theme-output/
-         ├── index.html          # 主页面
-         ├── config/
-         │   └── index.js        # 配置文件
-         └── README.md           # 说明文件
-         ```
+        ## 文件结构
+        ```
+        theme-output/
+        ├── index.html          # 主页面
+        ├── config/
+        │   └── index.js        # 配置文件
+        └── README.md           # 说明文件
+        ```
 
-         ## 客户端下载功能
-         配置文件包含完整的客户端下载功能：
+        ## 客户端下载功能
+        配置文件包含完整的客户端下载功能：
 
-         ### 支持的平台
-         - **iOS**: Shadowrocket, Surge, Stash, QuantumultX, Hiddify, SingBox, Loon
-         - **Android**: FlClash, V2rayNG, Clash, Surfboard, ClashMeta, Nekobox, SingBox, Hiddify
-         - **Windows**: FlClash, ClashVerge, Clash, Nekoray, SingBox, Hiddify
-         - **MacOS**: FlClash, ClashVerge, ClashX, ClashMetaX, Surge, Stash, QuantumultX, SingBox, Hiddify
+        ### 支持的平台
+        - **iOS**: Shadowrocket, Surge, Stash, QuantumultX, Hiddify, SingBox, Loon
+        - **Android**: FlClash, V2rayNG, Clash, Surfboard, ClashMeta, Nekobox, SingBox, Hiddify
+        - **Windows**: FlClash, ClashVerge, Clash, Nekoray, SingBox, Hiddify
+        - **MacOS**: FlClash, ClashVerge, ClashX, ClashMetaX, Surge, Stash, QuantumultX, SingBox, Hiddify
 
-         ### 自定义下载链接
-         在 `config/index.js` 中修改 `CLIENT_CONFIG.clientLinks` 来设置你的客户端下载链接：
-         ```javascript
-         clientLinks: {
-             ios: '你的iOS客户端链接',
-             android: '你的Android客户端链接',
-             windows: '你的Windows客户端链接',
-             macos: '你的MacOS客户端链接',
-             linux: '你的Linux客户端链接'
-         }
-         ```
+        ### 自定义下载链接
+        在 `config/index.js` 中修改 `CLIENT_CONFIG.clientLinks` 来设置你的客户端下载链接：
+        ```javascript
+        clientLinks: {
+            ios: '你的iOS客户端链接',
+            android: '你的Android客户端链接',
+            windows: '你的Windows客户端链接',
+            macos: '你的MacOS客户端链接',
+            linux: '你的Linux客户端链接'
+        }
+        ```
 
-         ### 显示控制
-         通过 `CLIENT_CONFIG` 中的开关控制各平台和客户端的显示：
-         ```javascript
-         showDownloadCard: true,    // 显示下载卡片
-         showIOS: true,             // 显示iOS平台
-         showAndroid: true,         // 显示Android平台
-         // ... 更多配置
-         ```
+        ### 显示控制
+        通过 `CLIENT_CONFIG` 中的开关控制各平台和客户端的显示：
+        ```javascript
+        showDownloadCard: true,    // 显示下载卡片
+        showIOS: true,             // 显示iOS平台
+        showAndroid: true,         // 显示Android平台
+        // ... 更多配置
+        ```
 
         ## 支持的面板类型
         - V2board
@@ -192,7 +192,7 @@ jobs:
          * logo 摆放位置为 images/logo.png
          */
 
-        export const config  = {
+        export const config = {
             // 面板类型配置 - 请选择您使用的面板类型
             PANEL_TYPE: '${{ github.event.inputs.panel_type || 'Xiao-V2board' }}', // 可选值: 'V2board', 'Xiao-V2board' 或 'Xboard'
             // 说明:
@@ -674,242 +674,45 @@ jobs:
                 }
             },
 
-                    // 工单配置
-        TICKET_CONFIG: {
-            // 是否在创建工单时发送用户基础信息 (true=发送, false=不发送)
-            includeUserInfoInTicket: true, // 默认发送用户信息
-            // 弹窗配置
-            popup: {
-                // 是否启用弹窗
-                enabled: true,
-                // 弹窗标题
-                title: "工单须知",
-                // 弹窗内容 (支持HTML)
-                content: "<p>请您准确描述您的问题，再提交工单，以便我们更快帮助您。</p>",
-                // 冷却时间（小时），在此时间内不会再次显示弹窗
-                cooldownHours: 24,
-                // 等待时间（秒），用户需要等待多少秒才能关闭弹窗，设为0表示无需等待
-                closeWaitSeconds: 0
-            },
-            // 图片上传配置
-            imageUpload: {
-                // 是否启用图片上传功能
-                enabled: true,
-                // 上传方式: 
-                // 'backend' = 后端API上传 (需要后端支持)
-                // 'webdav' = WebDAV直接上传 (坚果云、OneDrive等)
-                // 'imagebed' = 图床API上传 (ImgBB、SM.MS、Chevereto等)
-                uploadMethod: 'imagebed',
-                // 最大文件数量
-                maxFiles: 5,
-                // 最大文件大小 (字节)
-                maxSize: 5 * 1024 * 1024, // 5MB
-                
-                // ==================== WebDAV配置 ====================
-                // 支持：坚果云、OneDrive、自建WebDAV服务器等
-                webdav: {
-                    // WebDAV服务器地址
-                    // 坚果云: https://dav.jianguoyun.com/dav
-                    // OneDrive: https://your-domain.com/dav
-                    // 自建: https://your-webdav-server.com
-                    serverUrl: 'https://dav.jianguoyun.com/dav',
-                    // 用户名 (邮箱地址或用户名)
-                    username: 'your-email@example.com',
-                    // 密码 (应用专用密码，不是登录密码)
-                    password: 'your-app-password',
-                    // 上传路径 (在WebDAV中创建的文件夹)
-                    uploadPath: '/images',
-                    // 图片访问URL前缀 (需要手动创建分享链接)
-                    publicUrl: 'https://your-public-url.com/images'
-                },
-                
-                // ==================== 图床配置 ====================
-                // 支持多个图床配置，系统会自动选择可用的图床
-                imageBeds: [
-                    // 主图床 (ImgBB)
-                    {
-                        name: 'ImgBB',
-                        type: 'imgbb',
-                        apiUrl: 'https://api.imgbb.com/1/upload',
-                        apiKey: '85719aefcab7c40a7eaed3b06784898a',
-                        enabled: true,
-                        priority: 1, // 优先级，数字越小优先级越高
-                        description: '免费图床，支持直接链接'
-                    },
-                    
-                    // 备用图床 (SM.MS)
-                    {
-                        name: 'SM.MS',
-                        type: 'smms',
-                        apiUrl: 'https://sm.ms/api/v2/upload',
-                        apiKey: 'your-smms-api-key',
-                        headers: {
-                            'Authorization': 'your-smms-token'
-                        },
-                        enabled: true,
-                        priority: 2,
-                        description: '免费图床，需要注册'
-                    },
-                    
-                    // 自建图床 (Chevereto)
-                    {
-                        name: 'Chevereto',
-                        type: 'chevereto',
-                        apiUrl: 'https://your-domain.com/api/1/upload',
-                        apiKey: 'your-chevereto-api-key',
-                        headers: {
-                            'X-API-Key': 'your-chevereto-api-key'
-                        },
-                        enabled: true,
-                        priority: 3,
-                        description: '自建图床，完全控制'
-                    }
-                ],
-                
-                // 图床选择策略
-                imageBedStrategy: {
-                    // 选择策略: 'priority'=按优先级选择, 'round-robin'=轮询选择, 'random'=随机选择
-                    method: 'priority',
-                    // 是否启用故障转移 (当主图床失败时自动切换到备用图床)
-                    enableFailover: true,
-                    // 故障转移重试次数
-                    maxRetries: 3,
-                    // 重试间隔 (毫秒)
-                    retryDelay: 1000
-                },
-                
-                // 兼容旧配置 (单个图床配置)
-                imageBed: {
-                    type: 'imgbb',
-                    apiUrl: 'https://api.imgbb.com/1/upload',
-                    apiKey: '85719aefcab7c40a7eaed3b06784898a',
-                    headers: {},
-                    params: {}
-                },
-                
-                // ==================== 图床预设配置 ====================
-                // 您可以直接使用以下预设配置，只需修改API密钥
-                presets: {
-                    // ImgBB (免费，无需注册，但需要API密钥)
-                    imgbb: {
-                        type: 'imgbb',
-                        apiUrl: 'https://api.imgbb.com/1/upload',
-                        apiKey: 'your-imgbb-api-key', // 从 https://api.imgbb.com/ 获取
-                        description: '免费图床，支持直接链接，无需注册即可使用'
-                    },
-                    
-                    // SM.MS (免费，需要注册)
-                    smms: {
-                        type: 'smms',
-                        apiUrl: 'https://sm.ms/api/v2/upload',
-                        apiKey: 'your-smms-api-key', // 从 https://sm.ms/user 获取
-                        headers: {
-                            'Authorization': 'your-smms-token'
-                        },
-                        description: '免费图床，支持多种格式，需要注册账号'
-                    },
-                    
-                    // Chevereto (自建图床)
-                    chevereto: {
-                        type: 'chevereto',
-                        apiUrl: 'https://your-chevereto-domain.com/api/1/upload',
-                        apiKey: 'your-chevereto-api-key',
-                        headers: {
-                            'X-API-Key': 'your-chevereto-api-key'
-                        },
-                        description: '自建图床，完全控制，需要自己搭建服务器'
-                    },
-                    
-                    // Lsky Pro (兰空图床)
-                    lsky: {
-                        type: 'lsky',
-                        apiUrl: 'https://your-lsky-domain.com/api/v1/upload',
-                        apiKey: 'your-lsky-api-key',
-                        headers: {
-                            'Authorization': 'Bearer your-lsky-token'
-                        },
-                        description: '开源图床程序，支持多种存储方式'
-                    },
-                    
-                    // 阿里云OSS
-                    aliyun: {
-                        type: 'custom',
-                        apiUrl: 'https://your-bucket.oss-cn-region.aliyuncs.com',
-                        apiKey: 'your-access-key-id',
-                        headers: {
-                            'Authorization': 'OSS your-access-key-id:signature'
-                        },
-                        description: '阿里云对象存储，稳定可靠，需要付费'
-                    },
-                    
-                    // 腾讯云COS
-                    tencent: {
-                        type: 'custom',
-                        apiUrl: 'https://your-bucket.cos.region.myqcloud.com',
-                        apiKey: 'your-secret-id',
-                        headers: {
-                            'Authorization': 'q-sign-algorithm=sha1&q-ak=your-secret-id&q-sign-time=timestamp&q-key-time=timestamp&q-header-list=host&q-url-param-list=&q-signature=signature'
-                        },
-                        description: '腾讯云对象存储，国内访问速度快'
-                    },
-                    
-                    // 七牛云
-                    qiniu: {
-                        type: 'custom',
-                        apiUrl: 'https://your-bucket.qiniu.com',
-                        apiKey: 'your-access-key',
-                        headers: {
-                            'Authorization': 'QBox your-access-key:signature'
-                        },
-                        description: '七牛云对象存储，CDN加速'
-                    },
-                    
-                    // GitHub (使用GitHub作为图床)
-                    github: {
-                        type: 'custom',
-                        apiUrl: 'https://api.github.com/repos/username/repo/contents/images',
-                        apiKey: 'your-github-token',
-                        headers: {
-                            'Authorization': 'token your-github-token',
-                            'Content-Type': 'application/json'
-                        },
-                        description: '使用GitHub仓库存储图片，免费但有限制'
-                    },
-                    
-                    // Gitee (码云)
-                    gitee: {
-                        type: 'custom',
-                        apiUrl: 'https://gitee.com/api/v5/repos/username/repo/contents/images',
-                        apiKey: 'your-gitee-token',
-                        headers: {
-                            'Authorization': 'token your-gitee-token'
-                        },
-                        description: '国内Git服务，访问速度快'
-                    }
+            // 工单配置
+            TICKET_CONFIG: {
+                // 是否在创建工单时发送用户基础信息 (true=发送, false=不发送)
+                includeUserInfoInTicket: true, // 默认发送用户信息
+                // 弹窗配置
+                popup: {
+                    // 是否启用弹窗
+                    enabled: true,
+                    // 弹窗标题
+                    title: "工单须知",
+                    // 弹窗内容 (支持HTML)
+                    content: "<p>请您准确描述您的问题，再提交工单，以便我们更快帮助您。</p>",
+                    // 冷却时间（小时），在此时间内不会再次显示弹窗
+                    cooldownHours: 24,
+                    // 等待时间（秒），用户需要等待多少秒才能关闭弹窗，设为0表示无需等待
+                    closeWaitSeconds: 0
                 }
-            }
-        },
+            },
 
-                    // 流量明细配置
-        TRAFFICLOG_CONFIG: {
-            // 是否启用流量明细页面 (true=启用, false=禁用)
-            enableTrafficLog: true, // 默认启用
+            // 流量明细配置
+            TRAFFICLOG_CONFIG: {
+                // 是否启用流量明细页面 (true=启用, false=禁用)
+                enableTrafficLog: true, // 默认启用
 
-            // 显示多少天的流量记录
-            daysToShow: 30 // 默认显示30天
-        },
+                // 显示多少天的流量记录
+                daysToShow: 30 // 默认显示30天
+            },
 
-                    // 节点列表配置
-        NODES_CONFIG: {
-            // 是否显示节点倍率 (true=显示, false=隐藏，若此处为false则allowViewNodeInfo也会为false)
-            showNodeRate: true,
+            // 节点列表配置
+            NODES_CONFIG: {
+                // 是否显示节点倍率 (true=显示, false=隐藏，若此处为false则allowViewNodeInfo也会为false)
+                showNodeRate: true,
 
-            // 是否显示节点详细信息（主机和端口）
-            showNodeDetails: false,
+                // 是否显示节点详细信息（主机和端口）
+                showNodeDetails: false,
 
-            // 是否允许查看节点详细信息（控制详情按钮和模态框）
-            allowViewNodeInfo: true 
-        },
+                // 是否允许查看节点详细信息（控制详情按钮和模态框）
+                allowViewNodeInfo: true 
+            },
 
             // 客服系统配置
             CUSTOMER_SERVICE_CONFIG: {
@@ -983,10 +786,10 @@ jobs:
                     // 主题格式，最后一个逗号要去掉
                     // 使用svgIcon属性插入自定义SVG代码，确保SVG代码中使用currentColor以适应主题色
                 ]
-            },
+            }
         };
 
-        window.EZ_CONFIG = config
+        window.EZ_CONFIG = config;
         EOF
         
     - name: Create ZIP file
