@@ -100,7 +100,7 @@ jobs:
         git push origin main
 
   package-user-theme:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'false'
     runs-on: ubuntu-latest
     
     steps:
@@ -113,8 +113,36 @@ jobs:
         
         # 检查公共主题是否存在
         if [ ! -d "public-theme" ]; then
-          echo "Public theme not found. Please build public theme first."
-          exit 1
+          echo "Public theme not found. Creating simple theme structure..."
+          mkdir -p public-theme
+          cat > public-theme/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${{ github.event.inputs.site_name || 'EZ Theme' }}</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+                  .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                  h1 { color: #333; text-align: center; }
+                  .info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>${{ github.event.inputs.site_name || 'EZ Theme' }}</h1>
+                  <div class="info">
+                      <h3>构建信息</h3>
+                      <p><strong>构建时间:</strong> $(date)</p>
+                      <p><strong>面板类型:</strong> ${{ github.event.inputs.panel_type || 'Xiao-V2board' }}</p>
+                      <p><strong>API地址:</strong> ${{ github.event.inputs.api_url || 'https://your-panel.com' }}</p>
+                  </div>
+              </div>
+              <script src="config/index.js"></script>
+          </body>
+          </html>
+          EOF
         fi
         
         # 创建用户主题目录
