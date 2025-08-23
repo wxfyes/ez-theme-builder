@@ -10,7 +10,7 @@
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "echo 'Backend build complete'",
     "install:all": "npm install && cd frontend && npm install",
-    "prepare-base": "node prepare-base-build.js",
+    "prepare-base": "echo 'Skipping local build - using GitHub Actions'",
     "safe-build": "node safe-build.js",
     "lightweight-build": "node lightweight-build.js",
     "vercel-build": "node vercel-build.js",
