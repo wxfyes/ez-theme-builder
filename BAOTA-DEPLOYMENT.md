@@ -69,6 +69,62 @@ chmod +x deploy-baota.sh
 ./deploy-baota.sh
 ```
 
+### 方法二：使用一键删除脚本
+
+```bash
+# 下载删除脚本
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/remove-baota.sh
+
+# 给脚本执行权限
+chmod +x remove-baota.sh
+
+# 运行删除脚本
+./remove-baota.sh
+```
+
+### 方法三：快速删除（紧急情况）
+
+```bash
+# 下载快速删除脚本
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/quick-remove.sh
+
+# 给脚本执行权限
+chmod +x quick-remove.sh
+
+# 运行快速删除脚本
+./quick-remove.sh
+```
+
+### 方法四：Git仓库修复（解决Git问题）
+
+如果遇到 `fatal: not a git repository` 错误：
+
+```bash
+# 下载Git修复脚本
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/fix-git-issue.sh
+
+# 给脚本执行权限
+chmod +x fix-git-issue.sh
+
+# 运行Git修复脚本
+./fix-git-issue.sh
+```
+
+### 方法五：直接下载部署（不依赖Git）
+
+如果Git有问题，可以直接下载ZIP文件：
+
+```bash
+# 下载直接部署脚本
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/download-direct.sh
+
+# 给脚本执行权限
+chmod +x download-direct.sh
+
+# 运行直接部署脚本
+./download-direct.sh
+```
+
 ### 方法二：手动部署
 
 #### 1. 克隆项目
@@ -227,6 +283,36 @@ tail -f /www/wwwroot/ez-theme-builder/logs/combined.log
 tail -f /www/wwwroot/ez-theme-builder/logs/err.log
 ```
 
+### 3. Git相关问题
+
+#### Git仓库错误
+如果遇到 `fatal: not a git repository` 错误：
+
+```bash
+# 方法1：使用Git修复脚本
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/fix-git-issue.sh
+chmod +x fix-git-issue.sh
+./fix-git-issue.sh
+
+# 方法2：直接下载部署（推荐）
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/download-direct.sh
+chmod +x download-direct.sh
+./download-direct.sh
+```
+
+#### Git下载失败
+如果Git克隆或拉取失败：
+
+```bash
+# 检查网络连接
+ping github.com
+
+# 尝试使用备用下载方式
+wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/download-direct.sh
+chmod +x download-direct.sh
+./download-direct.sh
+```
+
 ## 📈 **性能优化**
 
 ### 1. 内存优化
@@ -290,7 +376,44 @@ pm2 restart ez-theme-builder
 3. 检查宝塔面板错误日志
 4. 确认端口和防火墙设置
 
+## 🗑️ **删除和清理**
+
+### 完整删除脚本
+
+`remove-baota.sh` 提供完整的删除功能：
+
+- ✅ 停止并删除PM2进程
+- ✅ 删除项目目录和所有文件
+- ✅ 清理临时目录
+- ✅ 清理npm缓存
+- ✅ 清理系统日志
+- ✅ 清理环境变量
+- ✅ 可选删除全局Node.js模块
+- ✅ 可选删除数据库文件
+- ✅ 提供宝塔面板配置清理指导
+
+### 快速删除脚本
+
+`quick-remove.sh` 用于紧急情况：
+
+- ⚡ 快速停止PM2进程
+- ⚡ 快速删除项目目录
+- ⚡ 快速清理临时文件
+- ⚡ 快速清理npm缓存
+
+### 使用建议
+
+1. **正常删除**：使用 `remove-baota.sh`
+2. **紧急删除**：使用 `quick-remove.sh`
+3. **重新部署**：删除后运行 `deploy-baota.sh`
+
 ## 更新日志
+
+### v1.6.0
+- 添加一键删除脚本
+- 添加快速删除脚本
+- 完善删除和清理功能
+- 优化脚本安全性
 
 ### v1.5.0
 - 添加宝塔面板部署指南
