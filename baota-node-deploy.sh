@@ -1,14 +1,22 @@
 #!/bin/bash
-# 最简单的 EZ-Theme Builder 安装脚本
+# 宝塔面板 Node.js 管理器部署脚本
 set -e
 
-echo "🚀 开始最简单的安装方式..."
+echo "🚀 宝塔面板 Node.js 管理器部署脚本"
 
 # 检查是否为root用户
 if [ "$EUID" -ne 0 ]; then
     echo "❌ 请使用root用户运行此脚本"
     exit 1
 fi
+
+# 检查宝塔面板是否安装
+if [ ! -f "/etc/init.d/bt" ]; then
+    echo "❌ 未检测到宝塔面板，请先安装宝塔面板"
+    exit 1
+fi
+
+echo "✅ 检测到宝塔面板"
 
 # 创建项目目录
 PROJECT_DIR="/www/wwwroot/ez-theme-builder"
@@ -20,13 +28,16 @@ cd "$PROJECT_DIR"
 echo "🧹 清理旧文件..."
 rm -rf * .* 2>/dev/null || true
 
-# 安装 Node.js 18
-echo "📦 安装 Node.js 18..."
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - || true
-    apt-get install -y nodejs || true
+# 检查 Node.js 管理器
+echo "📦 检查 Node.js 管理器..."
+if [ ! -d "/www/server/nodejs" ]; then
+    echo "❌ 未检测到 Node.js 管理器，请在宝塔面板中安装 Node.js 管理器"
+    echo "💡 路径：宝塔面板 -> 软件商店 -> Node.js 管理器"
+    exit 1
 fi
 
+# 设置 Node.js 环境
+export PATH="/www/server/nodejs/22.18.0/bin:$PATH"
 echo "✅ Node.js 版本: $(node --version)"
 echo "✅ npm 版本: $(npm --version)"
 
@@ -83,23 +94,10 @@ mkdir -p logs builds temp data
 # 设置权限
 echo "🔐 设置文件权限..."
 chmod -R 755 .
-chown -R www-data:www-data .
+chown -R www:www .
 
-# 创建启动脚本
-echo "📝 创建启动脚本..."
-cat > start.sh << 'EOF'
-#!/bin/bash
-cd /www/wwwroot/ez-theme-builder
-export NODE_ENV=production
-export PORT=3000
-export NODE_OPTIONS="--max-old-space-size=512"
-node server.js
-EOF
-
-chmod +x start.sh
-
-# 创建 PM2 配置文件
-echo "📝 创建 PM2 配置..."
+# 创建宝塔 Node.js 项目配置
+echo "📝 创建宝塔 Node.js 项目配置..."
 cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [{
@@ -114,10 +112,50 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: 3000,
       NODE_OPTIONS: '--max-old-space-size=512'
-    }
+    },
+    error_file: '/www/wwwroot/ez-theme-builder/logs/err.log',
+    out_file: '/www/wwwroot/ez-theme-builder/logs/out.log',
+    log_file: '/www/wwwroot/ez-theme-builder/logs/combined.log',
+    time: true
   }]
 }
 EOF
+
+# 创建启动脚本
+echo "📝 创建启动脚本..."
+cat > start.sh << 'EOF'
+#!/bin/bash
+cd /www/wwwroot/ez-theme-builder
+export PATH="/www/server/nodejs/22.18.0/bin:$PATH"
+export NODE_ENV=production
+export PORT=3000
+export NODE_OPTIONS="--max-old-space-size=512"
+node server.js
+EOF
+
+chmod +x start.sh
+
+# 创建停止脚本
+echo "📝 创建停止脚本..."
+cat > stop.sh << 'EOF'
+#!/bin/bash
+pkill -f "node.*server.js" || true
+pkill -f "ez-theme-builder" || true
+EOF
+
+chmod +x stop.sh
+
+# 创建重启脚本
+echo "📝 创建重启脚本..."
+cat > restart.sh << 'EOF'
+#!/bin/bash
+cd /www/wwwroot/ez-theme-builder
+./stop.sh
+sleep 2
+./start.sh
+EOF
+
+chmod +x restart.sh
 
 # 安装 PM2
 echo "📦 安装 PM2..."
@@ -128,6 +166,30 @@ echo "🚀 启动应用..."
 pm2 start ecosystem.config.js
 pm2 startup
 pm2 save
+
+# 创建宝塔面板网站配置
+echo "📝 创建宝塔面板网站配置..."
+cat > baota-site-config.txt << 'EOF'
+宝塔面板网站配置说明：
+
+1. 在宝塔面板中创建网站：
+   - 域名：你的域名或IP
+   - 根目录：/www/wwwroot/ez-theme-builder
+
+2. 在网站设置中配置反向代理：
+   - 代理名称：ez-theme-builder
+   - 目标URL：http://127.0.0.1:3000
+   - 发送域名：$host
+
+3. 或者直接访问：http://你的服务器IP:3000
+
+4. 管理命令：
+   - 启动：pm2 start ez-theme-builder
+   - 停止：pm2 stop ez-theme-builder
+   - 重启：pm2 restart ez-theme-builder
+   - 查看日志：pm2 logs ez-theme-builder
+   - 查看状态：pm2 status
+EOF
 
 # 检查状态
 echo "📊 检查应用状态..."
@@ -144,7 +206,7 @@ else
 fi
 
 echo ""
-echo "🎉 安装完成！"
+echo "🎉 宝塔面板部署完成！"
 echo ""
 echo "📋 管理命令："
 echo "  启动: pm2 start ez-theme-builder"
@@ -154,5 +216,7 @@ echo "  查看日志: pm2 logs ez-theme-builder"
 echo "  查看状态: pm2 status"
 echo ""
 echo "🌐 访问地址: http://你的服务器IP:3000"
+echo ""
+echo "📝 宝塔面板配置说明已保存到: baota-site-config.txt"
 echo ""
 echo "💡 如果遇到问题，请运行: pm2 logs ez-theme-builder"

@@ -2,26 +2,20 @@ version: '3.8'
 
 services:
   ez-theme-builder:
-    build:
-      context: .
-      dockerfile: Dockerfile.simple
-    container_name: ez-theme-builder
-    restart: unless-stopped
+    build: .
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NODE_OPTIONS=--max-old-space-size=512
       - PORT=3000
-      - JWT_SECRET=your-secret-key-here
+      - JWT_SECRET=your-jwt-secret-here
     volumes:
-      - ./logs:/app/logs
+      - ./data:/app/data
       - ./builds:/app/builds
       - ./temp:/app/temp
-      - ./data:/app/data
-    networks:
-      - ez-theme-network
-
-networks:
-  ez-theme-network:
-    driver: bridge
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

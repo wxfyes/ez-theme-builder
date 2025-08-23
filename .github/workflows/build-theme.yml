@@ -1,0 +1,109 @@
+name: Build EZ Theme
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      panel_type:
+        description: 'Panel Type'
+        required: true
+        default: 'Xiao-V2board'
+        type: choice
+        options:
+        - Xiao-V2board
+        - V2board
+        - SSPanel
+      site_name:
+        description: 'Site Name'
+        required: true
+        default: 'EZ Theme'
+        type: string
+      site_description:
+        description: 'Site Description'
+        required: false
+        default: '专业的主题生成服务'
+        type: string
+      api_url:
+        description: 'API URL'
+        required: true
+        default: 'https://your-panel.com'
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm install
+        cd base-build
+        npm install
+        
+    - name: Build theme
+      run: |
+        cd base-build
+        npm run build
+      env:
+        NODE_OPTIONS: '--max-old-space-size=4096'
+        
+    - name: Create config file
+      run: |
+        mkdir -p base-build/dist/config
+        cat > base-build/dist/config/index.js << 'EOF'
+        export const config = {
+          PANEL_TYPE: '${{ github.event.inputs.panel_type || 'Xiao-V2board' }}',
+          SITE_CONFIG: {
+            siteName: '${{ github.event.inputs.site_name || 'EZ Theme' }}',
+            siteDescription: '${{ github.event.inputs.site_description || '专业的主题生成服务' }}'
+          },
+          API_CONFIG: {
+            baseURL: '${{ github.event.inputs.api_url || 'https://your-panel.com' }}'
+          }
+        };
+        window.EZ_CONFIG = config;
+        EOF
+        
+    - name: Create ZIP file
+      run: |
+        cd base-build/dist
+        zip -r ../../theme-build.zip .
+        
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: theme-build
+        path: theme-build.zip
+        
+    - name: Create release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: theme-build.zip
+        tag_name: v${{ github.run_number }}
+        name: EZ Theme Build v${{ github.run_number }}
+        body: |
+          ## EZ Theme 构建版本
+          
+          **面板类型:** ${{ github.event.inputs.panel_type || 'Xiao-V2board' }}
+          **网站名称:** ${{ github.event.inputs.site_name || 'EZ Theme' }}
+          **API地址:** ${{ github.event.inputs.api_url || 'https://your-panel.com' }}
+          
+          ### 使用方法
+          1. 下载 ZIP 文件
+          2. 解压到你的网站根目录
+          3. 配置你的 API 地址
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
