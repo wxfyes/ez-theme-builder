@@ -18,13 +18,13 @@ cd "$PROJECT_DIR"
 
 # 清理旧文件
 echo "🧹 清理旧文件..."
-rm -rf * .*
+rm -rf * .* 2>/dev/null || true
 
 # 安装 Node.js 18
 echo "📦 安装 Node.js 18..."
 if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - || true
+    apt-get install -y nodejs || true
 fi
 
 echo "✅ Node.js 版本: $(node --version)"
