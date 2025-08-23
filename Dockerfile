@@ -1,39 +1,50 @@
-# 使用Node.js 18 Alpine镜像
+# 使用官方Node.js 18镜像作为基础镜像
 FROM node:18-alpine
 
 # 设置工作目录
 WORKDIR /app
 
+# 安装系统依赖
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++ \
+    wget \
+    curl
+
 # 复制package.json文件
 COPY package*.json ./
-
-# 安装依赖
-RUN npm install
-
-# 复制前端package.json
 COPY frontend/package*.json ./frontend/
 
-# 安装前端依赖
-RUN cd frontend && npm install
+# 安装后端依赖
+RUN npm ci --only=production
 
-# 复制所有源代码
+# 安装前端依赖
+WORKDIR /app/frontend
+RUN npm ci --only=production
+
+# 复制源代码
+WORKDIR /app
 COPY . .
 
 # 构建前端
-RUN cd frontend && npm run build
+WORKDIR /app/frontend
+RUN npm run build
 
-# 准备基础构建
-RUN npm run prepare-base
+# 回到根目录
+WORKDIR /app
 
 # 创建必要的目录
-RUN mkdir -p builds temp
-
-# 设置环境变量
-ENV NODE_ENV=production
-ENV PORT=3000
+RUN mkdir -p logs builds temp data
 
 # 暴露端口
 EXPOSE 3000
 
-# 启动应用
-CMD ["npm", "start"]
+# 设置环境变量
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=512"
+ENV PORT=3000
+
+# 启动命令
+CMD ["node", "server.js"]

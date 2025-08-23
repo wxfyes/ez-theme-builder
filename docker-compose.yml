@@ -3,19 +3,23 @@ version: '3.8'
 services:
   ez-theme-builder:
     build: .
+    container_name: ez-theme-builder
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=512
       - PORT=3000
-      - JWT_SECRET=your-jwt-secret-here
+      - JWT_SECRET=your-secret-key-here
     volumes:
-      - ./data:/app/data
+      - ./logs:/app/logs
       - ./builds:/app/builds
       - ./temp:/app/temp
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - ./data:/app/data
+    networks:
+      - ez-theme-network
+
+networks:
+  ez-theme-network:
+    driver: bridge
