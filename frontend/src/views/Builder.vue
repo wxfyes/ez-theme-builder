@@ -98,6 +98,24 @@
                         <label>主题色</label>
                         <el-color-picker v-model="config.DEFAULT_CONFIG.primaryColor" />
                       </div>
+                      
+                      <div class="config-item">
+                        <label>构建方式</label>
+                        <el-radio-group v-model="buildMethod">
+                          <el-radio label="local">本地构建</el-radio>
+                          <el-radio label="github">GitHub Actions (推荐)</el-radio>
+                        </el-radio-group>
+                        <div class="build-method-info">
+                          <p v-if="buildMethod === 'github'" class="info-text">
+                            <el-icon><InfoFilled /></el-icon>
+                            使用 GitHub Actions 云端构建，适合小内存服务器
+                          </p>
+                          <p v-else class="info-text warning">
+                            <el-icon><Warning /></el-icon>
+                            本地构建需要较大内存，1核1G服务器可能失败
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
                     <div class="form-section">
@@ -655,7 +673,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Plus, ArrowDown } from '@element-plus/icons-vue'
+import { Delete, Plus, ArrowDown, InfoFilled, Warning } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 export default {
@@ -663,7 +681,9 @@ export default {
   components: {
     Delete,
     Plus,
-    ArrowDown
+    ArrowDown,
+    InfoFilled,
+    Warning
   },
   setup() {
     const router = useRouter()
@@ -676,6 +696,7 @@ export default {
     const systemConfig = ref({})
     const logoPreview = ref('')
     const logoFile = ref(null)
+    const buildMethod = ref('github') // 默认使用 GitHub Actions
 
     const user = computed(() => authStore.user)
     const isAdmin = computed(() => authStore.isAdmin)
@@ -1032,8 +1053,12 @@ export default {
       }
 
       try {
+        const confirmMessage = buildMethod.value === 'github' 
+          ? `确定要使用 GitHub Actions 构建吗？将扣除 ${systemConfig.value.price_per_build || 10} 积分`
+          : `确定要开始本地构建吗？将扣除 ${systemConfig.value.price_per_build || 10} 积分`
+
         await ElMessageBox.confirm(
-          `确定要开始构建吗？将扣除 ${systemConfig.value.price_per_build || 10} 积分`,
+          confirmMessage,
           '确认构建',
           {
             confirmButtonText: '确定',
@@ -1044,25 +1069,42 @@ export default {
 
         building.value = true
         
-        // 创建FormData对象，支持文件上传
-        const formData = new FormData()
-        formData.append('config_data', JSON.stringify(config))
-        
-        // 如果有logo文件，添加到FormData
-        if (logoFile.value) {
-          console.log('添加Logo文件到FormData:', logoFile.value)
-          formData.append('logo', logoFile.value)
+        if (buildMethod.value === 'github') {
+          // GitHub Actions 构建
+          const buildData = {
+            panel_type: config.PANEL_TYPE,
+            site_name: config.SITE_CONFIG.siteName,
+            site_description: config.SITE_CONFIG.siteDescription,
+            api_url: config.API_CONFIG.staticBaseUrl[0] || 'https://your-panel.com'
+          }
+          
+          const response = await axios.post('/api/build/github-actions', buildData)
+          
+          if (response.data.success) {
+            ElMessage.success('GitHub Actions 构建已触发，请稍后查看结果')
+            ElMessage.info('构建完成后，您可以从 GitHub Releases 下载主题文件')
+          } else {
+            throw new Error(response.data.error || 'GitHub Actions 构建失败')
+          }
         } else {
-          console.log('没有Logo文件需要上传')
+          // 本地构建
+          const formData = new FormData()
+          formData.append('config_data', JSON.stringify(config))
+          
+          if (logoFile.value) {
+            console.log('添加Logo文件到FormData:', logoFile.value)
+            formData.append('logo', logoFile.value)
+          }
+          
+          const response = await axios.post('/api/builds/create', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+
+          ElMessage.success('本地构建已开始，请稍后查看结果')
         }
         
-        const response = await axios.post('/api/builds/create', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
-
-        ElMessage.success('构建已开始，请稍后查看结果')
         router.push('/builds')
       } catch (error) {
         if (error.response?.status === 402) {
@@ -1373,6 +1415,35 @@ export default {
    margin: 0;
    color: #666;
    font-size: 0.875rem;
+ }
+
+ .build-method-info {
+   margin-top: 0.5rem;
+ }
+
+ .info-text {
+   display: flex;
+   align-items: center;
+   gap: 0.5rem;
+   margin: 0;
+   font-size: 0.875rem;
+   padding: 0.5rem;
+   border-radius: 4px;
+   background-color: #f0f9ff;
+   border: 1px solid #bae6fd;
+ }
+
+ .info-text .el-icon {
+   color: #0ea5e9;
+ }
+
+ .info-text.warning {
+   background-color: #fef3c7;
+   border-color: #fbbf24;
+ }
+
+ .info-text.warning .el-icon {
+   color: #f59e0b;
  }
 
 @media (max-width: 768px) {

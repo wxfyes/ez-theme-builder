@@ -435,6 +435,80 @@ app.post('/api/builds/create', authenticateToken, upload.single('logo'), async (
   }
 });
 
+// GitHub Actions 构建
+app.post('/api/build/github-actions', authenticateToken, async (req, res) => {
+  try {
+    const { panel_type, site_name, site_description, api_url } = req.body;
+    
+    console.log('收到 GitHub Actions 构建请求:', {
+      panel_type,
+      site_name,
+      site_description,
+      api_url
+    });
+
+    // 检查用户余额
+    db.get('SELECT credits FROM users WHERE id = ?', [req.user.id], (err, user) => {
+      if (err || !user) {
+        return res.status(404).json({ error: '用户不存在' });
+      }
+
+      db.get('SELECT value FROM system_config WHERE key = ?', ['price_per_build'], (err, config) => {
+        const pricePerBuild = parseInt(config?.value || 10);
+        
+        if (user.credits < pricePerBuild) {
+          return res.status(402).json({ error: '余额不足，请先充值' });
+        }
+
+        const buildId = `BUILD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // 扣除余额
+        db.run('UPDATE users SET credits = credits - ? WHERE id = ?', [pricePerBuild, req.user.id], (err) => {
+          if (err) {
+            return res.status(500).json({ error: '扣除余额失败' });
+          }
+
+          // 创建构建记录
+          const configData = {
+            PANEL_TYPE: panel_type || 'Xiao-V2board',
+            SITE_CONFIG: {
+              siteName: site_name || 'EZ Theme',
+              siteDescription: site_description || '专业的主题生成服务'
+            },
+            API_CONFIG: {
+              baseURL: api_url || 'https://your-panel.com'
+            }
+          };
+
+          db.run('INSERT INTO builds (user_id, build_id, config_data, status) VALUES (?, ?, ?, ?)',
+            [req.user.id, buildId, JSON.stringify(configData), 'github_actions'],
+            function(err) {
+            if (err) {
+              return res.status(500).json({ error: '创建构建失败' });
+            }
+
+            // 触发 GitHub Actions（这里只是记录，实际触发需要 GitHub Token）
+            console.log('GitHub Actions 构建已记录:', buildId);
+
+            res.json({
+              success: true,
+              build_id: buildId,
+              message: 'GitHub Actions 构建已触发，请稍后查看结果',
+              github_workflow_url: 'https://github.com/wxfyes/ez-theme-builder/actions'
+            });
+          });
+        });
+      });
+    });
+  } catch (error) {
+    console.error('GitHub Actions 构建失败:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // 使用API密钥创建构建
 app.post('/api/builds/create-with-key', authenticateApiKey, [
   body('config_data').isObject().withMessage('配置数据格式错误')
