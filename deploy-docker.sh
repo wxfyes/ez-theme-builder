@@ -22,6 +22,24 @@ fi
 
 echo "📋 系统信息: $OS $VER"
 
+# 修复Debian软件源问题
+fix_debian_sources() {
+    echo "🔧 修复Debian软件源..."
+    
+    # 备份原始源文件
+    cp /etc/apt/sources.list /etc/apt/sources.list.backup
+    
+    # 创建新的源文件
+    cat > /etc/apt/sources.list << 'EOF'
+# Debian 11 (Bullseye) 软件源
+deb http://deb.debian.org/debian bullseye main contrib non-free
+deb http://deb.debian.org/debian bullseye-updates main contrib non-free
+deb http://security.debian.org/debian-security bullseye-security main contrib non-free
+EOF
+    
+    echo "✅ Debian软件源已修复"
+}
+
 # 安装Docker
 install_docker() {
     echo "🔧 安装Docker..."
@@ -35,10 +53,25 @@ install_docker() {
     case $OS in
         *"Ubuntu"*|*"Debian"*)
             echo "📦 在Ubuntu/Debian上安装Docker..."
+            
+            # 修复Debian软件源
+            if [[ "$OS" == *"Debian"* ]]; then
+                fix_debian_sources
+            fi
+            
+            # 更新包列表
             apt-get update
+            
+            # 安装依赖
             apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+            
+            # 添加Docker官方GPG密钥
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+            
+            # 添加Docker仓库
             echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+            
+            # 安装Docker
             apt-get update
             apt-get install -y docker-ce docker-ce-cli containerd.io
             ;;
