@@ -315,9 +315,16 @@ chmod +x quick-fix.sh
 wget https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/quick-fix-safe.sh
 chmod +x quick-fix-safe.sh
 ./quick-fix-safe.sh
+
+# 方法3：使用终极修复脚本（推荐，处理所有构建问题）
+# 一键下载、设置权限并运行
+wget -O quick-fix-ultimate.sh https://raw.githubusercontent.com/wxfyes/ez-theme-builder/main/quick-fix-ultimate.sh && chmod +x quick-fix-ultimate.sh && ./quick-fix-ultimate.sh
 ```
 
-**注意**：如果遇到 `EEXIST: file already exists` 错误，请使用 `quick-fix-safe.sh` 脚本，它避免全局安装，只使用本地依赖。
+**注意**：
+- 如果遇到 `EEXIST: file already exists` 错误，请使用 `quick-fix-safe.sh` 脚本
+- 如果遇到 `No such file or directory` 错误（如 `./node_modules/.bin/vite: No such file or directory`），请使用 `quick-fix-ultimate.sh` 脚本
+- 终极修复脚本会尝试多种构建方法，包括npx、本地路径、npm run build和直接node调用
 
 #### Git下载失败
 如果Git克隆或拉取失败：
