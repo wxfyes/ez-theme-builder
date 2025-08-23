@@ -13,9 +13,8 @@ RUN apk add --no-cache \
     wget \
     curl
 
-# 复制package.json文件
-COPY package*.json ./
-COPY frontend/package*.json ./frontend/
+# 复制所有源代码
+COPY . .
 
 # 安装后端依赖（跳过postinstall脚本）
 RUN npm ci --only=production --ignore-scripts
@@ -24,15 +23,7 @@ RUN npm ci --only=production --ignore-scripts
 WORKDIR /app/frontend
 RUN npm ci --only=production
 
-# 复制源代码
-WORKDIR /app
-COPY . .
-
-# 手动运行prepare-base-build.js（如果存在）
-RUN if [ -f "prepare-base-build.js" ]; then node prepare-base-build.js; fi
-
 # 构建前端
-WORKDIR /app/frontend
 RUN npm run build
 
 # 回到根目录
